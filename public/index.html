@@ -976,26 +976,30 @@ function applySettingsToUI() {
   document.getElementById('buffer-val').textContent = settings.bufferPct + '%';
 }
 
+function readSettingsFromUI() {
+  const g = id => document.getElementById(id);
+  settings.jiraUrl    = g('jira-url')?.value.trim() || settings.jiraUrl;
+  settings.email      = g('jira-email')?.value.trim() || settings.email;
+  settings.token      = g('jira-token')?.value.trim() || settings.token;
+  settings.project    = (g('jira-project')?.value.trim() || settings.project).toUpperCase();
+  settings.fieldBE    = g('field-be')?.value.trim() || settings.fieldBE;
+  settings.fieldFE    = g('field-fe')?.value.trim() || settings.fieldFE;
+  settings.fieldPV    = g('field-pv')?.value.trim() || settings.fieldPV;
+  settings.rfdStatus  = g('rfd-status')?.value.trim() || settings.rfdStatus;
+  settings.sprintDays = parseInt(g('sprint-days')?.value) || settings.sprintDays;
+  settings.dailyHours = parseInt(g('daily-hours')?.value) || settings.dailyHours;
+  settings.effortUnit = g('effort-unit')?.value || settings.effortUnit;
+  settings.beCount    = parseInt(g('be-count')?.value) || settings.beCount;
+  settings.beEff      = parseInt(g('be-eff')?.value) || settings.beEff;
+  settings.feCount    = parseInt(g('fe-count')?.value) || settings.feCount;
+  settings.feEff      = parseInt(g('fe-eff')?.value) || settings.feEff;
+  settings.bufferPct  = parseInt(g('buffer-pct')?.value) || settings.bufferPct;
+}
+
 function saveSettings() {
-  settings.jiraUrl = document.getElementById('jira-url').value.trim();
-  settings.email = document.getElementById('jira-email').value.trim();
-  settings.token = document.getElementById('jira-token').value.trim();
-  settings.project = document.getElementById('jira-project').value.trim().toUpperCase();
-  settings.fieldBE = document.getElementById('field-be').value.trim();
-  settings.fieldFE = document.getElementById('field-fe').value.trim();
-  settings.fieldPV = document.getElementById('field-pv').value.trim();
-  settings.rfdStatus = document.getElementById('rfd-status').value.trim();
-  settings.sprintDays = parseInt(document.getElementById('sprint-days').value) || 5;
-  settings.dailyHours = parseInt(document.getElementById('daily-hours').value) || 8;
-  settings.effortUnit = document.getElementById('effort-unit').value;
-  settings.beCount = parseInt(document.getElementById('be-count').value) || 1;
-  settings.beEff = parseInt(document.getElementById('be-eff').value) || 80;
-  settings.feCount = parseInt(document.getElementById('fe-count').value) || 1;
-  settings.feEff = parseInt(document.getElementById('fe-eff').value) || 80;
-  settings.bufferPct = parseInt(document.getElementById('buffer-pct').value) || 20;
-  // Aktif profile kaydet
+  readSettingsFromUI();
   saveCurrentProfileSettings();
-  toast('Ayarlar kaydedildi', 'success');
+  toast('Ayarlar kaydedildi ✓', 'success');
   recalcCapacity();
 }
 
@@ -1052,14 +1056,41 @@ function recalcCapacity() {
 // Proxy üzerinden Jira API çağrısı
 function jiraFetch(path, params = {}) {
   const creds = btoa(`${settings.email}:${settings.token}`);
-  const qs = new URLSearchParams({ path, base: settings.jiraUrl, ...params });
+  const qs = new URLSearchParams();
+  qs.set('path', path);
+  qs.set('base', settings.jiraUrl);
+  // Her parametreyi ayrı ayrı ekle (nested obje sorununu önler)
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  });
   return fetch(`/api/jira?${qs.toString()}`, {
     headers: { 'Authorization': `Basic ${creds}`, 'Accept': 'application/json' }
   });
 }
 
+// POST ile Jira API çağrısı - body'de JSON gönderir (fields gibi array'lar için)
+function jiraFetchPost(path, body = {}) {
+  const creds = btoa(`${settings.email}:${settings.token}`);
+  const qs = new URLSearchParams();
+  qs.set('path', path);
+  qs.set('base', settings.jiraUrl);
+  qs.set('_method', 'POST');
+  return fetch(`/api/jira?${qs.toString()}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${creds}`,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+}
+
 async function testConnection() {
-  saveSettings();
+  // Önce UI'dan ayarları oku ve kaydet
+  readSettingsFromUI();
+  saveCurrentProfileSettings();
+
   if (!settings.jiraUrl || !settings.email || !settings.token) {
     toast('Jira URL, e-posta ve API token gerekli', 'error'); return;
   }
@@ -1067,8 +1098,11 @@ async function testConnection() {
 
   try {
     const resp = await jiraFetch('rest/api/3/myself');
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch(_) { throw new Error('Geçersiz yanıt: ' + text.substring(0, 100)); }
+
     if (resp.ok) {
-      const data = await resp.json();
       settings.connected = true;
       saveCurrentProfileSettings();
       updateConnectionBadge(true, data.displayName || 'Bağlı');
@@ -1076,8 +1110,8 @@ async function testConnection() {
       document.querySelectorAll('.demo-banner').forEach(el => el.style.display = 'none');
       await loadBacklog();
     } else {
-      const err = await resp.json();
-      toast(`Jira hatası: ${err.message || resp.status}`, 'error');
+      const msg = data.errorMessages?.join(', ') || data.message || `HTTP ${resp.status}`;
+      toast(`Jira hatası: ${msg}`, 'error');
       settings.connected = false;
       updateConnectionBadge(false);
     }
@@ -1117,12 +1151,9 @@ async function loadBacklog() {
 }
 
 async function fetchJiraBacklog() {
-  const jql = `project = ${settings.project} AND status = "READY FOR DEVELOPMENT" AND sprint = empty ORDER BY created DESC`;
-  const resp = await jiraFetch('rest/api/3/search/jql', {
-    jql,
-    maxResults: 100,
-    fields: `summary,issuetype,${settings.fieldBE},${settings.fieldFE},${settings.fieldPV}`
-  });
+  const jql = `project = ${settings.project} AND status = "${settings.rfdStatus}" AND sprint = empty ORDER BY created DESC`;
+  const fields = ['summary','issuetype', settings.fieldBE, settings.fieldFE, settings.fieldPV].filter(Boolean);
+  const resp = await jiraFetchPost('rest/api/3/search/jql', { jql, maxResults: 100, fields });
   if (!resp.ok) {
     const errBody = await resp.text();
     let msg = resp.status + '';
@@ -1385,11 +1416,8 @@ async function loadDashboard() {
 
   try {
     const jql = `project = ${settings.project} AND sprint = ${sprintId} ORDER BY created DESC`;
-    const resp = await jiraFetch('rest/api/3/search/jql', {
-      jql,
-      maxResults: 200,
-      fields: `summary,status,issuetype,assignee,${settings.fieldBE},${settings.fieldFE},${settings.fieldPV}`
-    });
+    const fields = ['summary','status','issuetype','assignee', settings.fieldBE, settings.fieldFE, settings.fieldPV].filter(Boolean);
+    const resp = await jiraFetchPost('rest/api/3/search/jql', { jql, maxResults: 200, fields });
 
     if (!resp.ok) {
       const errBody = await resp.text();
