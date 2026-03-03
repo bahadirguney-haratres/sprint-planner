@@ -324,6 +324,62 @@
   /* DIVIDER */
   .divider { height: 1px; background: var(--border); margin: 20px 0; }
 
+
+  /* ── PROFILE SYSTEM ─────────────────────────────────────────────── */
+  .profile-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px;
+  }
+  .profile-bar-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); }
+  .profile-chips { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+  .profile-chip {
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    background: var(--surface2); color: var(--text2);
+    font-family: 'Syne', sans-serif;
+  }
+  .profile-chip:hover { border-color: var(--accent); color: var(--text); }
+  .profile-chip.active {
+    background: linear-gradient(135deg, rgba(79,142,247,0.2), rgba(124,92,252,0.2));
+    border-color: var(--accent); color: var(--text);
+  }
+  .profile-chip .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
+  .profile-chip.active .chip-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .profile-chip .chip-del {
+    width: 16px; height: 16px; border-radius: 50%; background: transparent;
+    border: none; color: var(--text3); cursor: pointer; font-size: 12px;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    transition: all 0.15s; margin-left: 2px;
+  }
+  .profile-chip .chip-del:hover { background: rgba(239,68,68,0.2); color: var(--red); }
+  .profile-new-btn {
+    padding: 6px 14px; border-radius: 20px; border: 1px dashed var(--border2);
+    background: transparent; color: var(--text3); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; font-family: 'Syne', sans-serif;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .profile-new-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px); z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 14px; padding: 28px; width: 420px; max-width: 92vw;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    transform: translateY(12px); transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
   /* RESPONSIVE */
   @media (max-width: 768px) {
     .form-grid { grid-template-columns: 1fr; }
@@ -382,6 +438,13 @@
   <div class="view active" id="view-settings">
     <div class="section-title">Ayarlar & Yapılandırma</div>
     <div class="section-sub">Jira bağlantısı, ekip kapasitesi ve sprint parametrelerini yapılandırın.</div>
+
+    <!-- PROFILE BAR -->
+    <div class="profile-bar">
+      <span class="profile-bar-label">Profil</span>
+      <div class="profile-chips" id="profile-chips"></div>
+      <button class="profile-new-btn" onclick="openNewProfileModal()">＋ Yeni Profil</button>
+    </div>
 
     <div class="settings-grid">
 
@@ -560,14 +623,42 @@
 
 </div>
 
+<!-- New Profile Modal -->
+<div class="modal-overlay" id="modal-new-profile">
+  <div class="modal">
+    <div class="modal-title">✨ Yeni Profil Oluştur</div>
+    <div class="form-group">
+      <label>Profil Adı</label>
+      <input type="text" id="new-profile-name" placeholder="Örn: Şirket A — SUP Projesi" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-new-profile')">İptal</button>
+      <button class="btn btn-primary" onclick="createProfile()">Oluştur</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal-overlay" id="modal-confirm-delete">
+  <div class="modal">
+    <div class="modal-title">🗑 Profili Sil</div>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:4px">Bu profili silmek istediğinizden emin misiniz?</p>
+    <p style="color:var(--text3);font-size:12px" id="delete-profile-name"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-confirm-delete')">İptal</button>
+      <button class="btn btn-danger" onclick="confirmDeleteProfile()">Sil</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container" id="toasts"></div>
 
 <script>
 // ─── STATE ───────────────────────────────────────────────────────────────────
-let settings = {
+const DEFAULT_SETTINGS = {
   jiraUrl: '', email: '', token: '', project: '',
-  fieldBE: 'customfield_10030', fieldFE: 'customfield_10031', fieldPV: 'customfield_10032',
-  rfdStatus: 'Ready For Development',
+  fieldBE: 'customfield_10030', fieldFE: 'customfield_10031', fieldPV: 'customfield_10319',
+  rfdStatus: 'READY FOR DEVELOPMENT',
   sprintDays: 5, dailyHours: 8, effortUnit: 'hours',
   beCount: 2, beEff: 80,
   feCount: 2, feEff: 80,
@@ -575,6 +666,10 @@ let settings = {
   connected: false
 };
 
+let settings = { ...DEFAULT_SETTINGS };
+let profiles = [];       // { id, name, settings }
+let activeProfileId = null;
+let pendingDeleteId = null;
 let backlogItems = [];
 
 // ─── DEMO DATA ───────────────────────────────────────────────────────────────
@@ -595,25 +690,160 @@ const demoData = [
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 window.onload = async () => {
-  loadFromStorage();
+  loadProfiles();
   recalcCapacity();
-  // Kaydedilmiş bağlantı varsa otomatik Jira verisi çek
   if (settings.connected && settings.jiraUrl && settings.token) {
     document.querySelectorAll(".demo-banner").forEach(el => el.style.display = "none");
   }
   await loadBacklog();
 };
 
-function loadFromStorage() {
-  const saved = localStorage.getItem('sprint_planner_settings');
-  if (saved) {
-    try {
-      const s = JSON.parse(saved);
-      Object.assign(settings, s);
-      applySettingsToUI();
-    } catch(e) {}
+// ─── PROFILE SYSTEM ──────────────────────────────────────────────────────────
+function loadProfiles() {
+  try {
+    profiles = JSON.parse(localStorage.getItem('sp_profiles') || '[]');
+    activeProfileId = localStorage.getItem('sp_active_profile');
+  } catch(e) { profiles = []; }
+
+  // Hiç profil yoksa default boş profil oluştur
+  if (profiles.length === 0) {
+    const def = { id: genId(), name: 'Varsayılan', settings: { ...DEFAULT_SETTINGS } };
+    profiles.push(def);
+    activeProfileId = def.id;
+    saveProfilesToStorage();
+  }
+
+  // Aktif profil yoksa ilkini seç
+  if (!profiles.find(p => p.id === activeProfileId)) {
+    activeProfileId = profiles[0].id;
+    localStorage.setItem('sp_active_profile', activeProfileId);
+  }
+
+  // Aktif profil ayarlarını yükle
+  const active = profiles.find(p => p.id === activeProfileId);
+  if (active) {
+    settings = { ...DEFAULT_SETTINGS, ...active.settings };
+    applySettingsToUI();
+  }
+
+  renderProfileChips();
+}
+
+function saveProfilesToStorage() {
+  localStorage.setItem('sp_profiles', JSON.stringify(profiles));
+  localStorage.setItem('sp_active_profile', activeProfileId);
+}
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function renderProfileChips() {
+  const container = document.getElementById('profile-chips');
+  if (!container) return;
+  container.innerHTML = profiles.map(p => `
+    <div class="profile-chip ${p.id === activeProfileId ? 'active' : ''}" onclick="switchProfile('${p.id}')">
+      <span class="chip-dot"></span>
+      <span>${p.name}</span>
+      ${profiles.length > 1 ? `<button class="chip-del" onclick="event.stopPropagation(); askDeleteProfile('${p.id}', '${p.name.replace(/'/g, '\'')}')" title="Sil">×</button>` : ''}
+    </div>
+  `).join('');
+}
+
+function switchProfile(id) {
+  if (id === activeProfileId) return;
+  // Mevcut profil ayarlarını kaydet
+  saveCurrentProfileSettings();
+  // Yeni profili aktiflestir
+  activeProfileId = id;
+  localStorage.setItem('sp_active_profile', id);
+  const profile = profiles.find(p => p.id === id);
+  if (profile) {
+    settings = { ...DEFAULT_SETTINGS, ...profile.settings };
+    applySettingsToUI();
+    recalcCapacity();
+  }
+  renderProfileChips();
+  // Bağlantı varsa backlog'u yenile
+  if (settings.connected && settings.jiraUrl && settings.token) {
+    document.querySelectorAll('.demo-banner').forEach(el => el.style.display = 'none');
+    loadBacklog();
+  } else {
+    document.querySelectorAll('.demo-banner').forEach(el => el.style.display = '');
+    backlogItems = [];
+    renderBacklog([]);
+  }
+  toast(`"${profile?.name}" profili aktif`, 'info');
+}
+
+function saveCurrentProfileSettings() {
+  const profile = profiles.find(p => p.id === activeProfileId);
+  if (profile) {
+    profile.settings = { ...settings };
+    saveProfilesToStorage();
   }
 }
+
+function openNewProfileModal() {
+  document.getElementById('new-profile-name').value = '';
+  document.getElementById('modal-new-profile').classList.add('open');
+  setTimeout(() => document.getElementById('new-profile-name').focus(), 100);
+}
+
+function createProfile() {
+  const name = document.getElementById('new-profile-name').value.trim();
+  if (!name) { toast('Profil adı gerekli', 'error'); return; }
+  // Mevcut ayarları kaydet
+  saveCurrentProfileSettings();
+  // Yeni profil oluştur (boş ayarlarla)
+  const newProfile = { id: genId(), name, settings: { ...DEFAULT_SETTINGS } };
+  profiles.push(newProfile);
+  activeProfileId = newProfile.id;
+  settings = { ...DEFAULT_SETTINGS };
+  applySettingsToUI();
+  recalcCapacity();
+  saveProfilesToStorage();
+  renderProfileChips();
+  closeModal('modal-new-profile');
+  backlogItems = [];
+  renderBacklog([]);
+  document.querySelectorAll('.demo-banner').forEach(el => el.style.display = '');
+  toast(`"${name}" profili oluşturuldu`, 'success');
+}
+
+function askDeleteProfile(id, name) {
+  pendingDeleteId = id;
+  document.getElementById('delete-profile-name').textContent = name;
+  document.getElementById('modal-confirm-delete').classList.add('open');
+}
+
+function confirmDeleteProfile() {
+  if (!pendingDeleteId) return;
+  profiles = profiles.filter(p => p.id !== pendingDeleteId);
+  if (activeProfileId === pendingDeleteId) {
+    activeProfileId = profiles[0]?.id || null;
+    const active = profiles.find(p => p.id === activeProfileId);
+    if (active) { settings = { ...DEFAULT_SETTINGS, ...active.settings }; applySettingsToUI(); }
+  }
+  pendingDeleteId = null;
+  saveProfilesToStorage();
+  renderProfileChips();
+  closeModal('modal-confirm-delete');
+  toast('Profil silindi', 'info');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ESC ile modal kapat
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+function loadFromStorage() { /* artık loadProfiles() kullanılıyor */ }
 
 function applySettingsToUI() {
   const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
@@ -655,7 +885,8 @@ function saveSettings() {
   settings.feCount = parseInt(document.getElementById('fe-count').value) || 1;
   settings.feEff = parseInt(document.getElementById('fe-eff').value) || 80;
   settings.bufferPct = parseInt(document.getElementById('buffer-pct').value) || 20;
-  localStorage.setItem('sprint_planner_settings', JSON.stringify(settings));
+  // Aktif profile kaydet
+  saveCurrentProfileSettings();
   toast('Ayarlar kaydedildi', 'success');
   recalcCapacity();
 }
@@ -731,7 +962,7 @@ async function testConnection() {
     if (resp.ok) {
       const data = await resp.json();
       settings.connected = true;
-      saveSettings();
+      saveCurrentProfileSettings();
       updateConnectionBadge(true, data.displayName || 'Bağlı');
       toast(`Bağlantı başarılı: ${data.displayName} — Backlog yükleniyor...`, 'success');
       document.querySelectorAll('.demo-banner').forEach(el => el.style.display = 'none');
