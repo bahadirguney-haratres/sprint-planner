@@ -1,6 +1,0 @@
-{
-  "name": "sprint-planner",
-  "version": "1.0.0",
-  "description": "Jira Sprint Planner with capacity management",
-  "engines": { "node": "18.x" }
-}
