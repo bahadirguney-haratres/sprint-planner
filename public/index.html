@@ -594,10 +594,14 @@ const demoData = [
 ];
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-window.onload = () => {
+window.onload = async () => {
   loadFromStorage();
   recalcCapacity();
-  loadBacklog();
+  // Kaydedilmiş bağlantı varsa otomatik Jira verisi çek
+  if (settings.connected && settings.jiraUrl && settings.token) {
+    document.querySelectorAll(".demo-banner").forEach(el => el.style.display = "none");
+  }
+  await loadBacklog();
 };
 
 function loadFromStorage() {
@@ -727,8 +731,11 @@ async function testConnection() {
     if (resp.ok) {
       const data = await resp.json();
       settings.connected = true;
+      saveSettings();
       updateConnectionBadge(true, data.displayName || 'Bağlı');
-      toast(`Bağlantı başarılı: ${data.displayName}`, 'success');
+      toast(`Bağlantı başarılı: ${data.displayName} — Backlog yükleniyor...`, 'success');
+      document.querySelectorAll('.demo-banner').forEach(el => el.style.display = 'none');
+      await loadBacklog();
     } else {
       const err = await resp.json();
       toast(`Jira hatası: ${err.message || resp.status}`, 'error');
@@ -756,7 +763,9 @@ async function loadBacklog() {
       await fetchJiraBacklog();
       return;
     } catch(e) {
-      console.warn('Jira fetch failed, using demo data:', e);
+      console.error('Jira fetch failed:', e);
+      document.getElementById('backlog-content').innerHTML = `<div class="no-data"><div class="icon">⚠️</div><p>Jira verisi alınamadı: ${e.message}</p><p style="margin-top:8px"><button class="btn btn-secondary btn-sm" onclick="loadBacklog()">Tekrar Dene</button></p></div>`;
+      return;
     }
   }
 
