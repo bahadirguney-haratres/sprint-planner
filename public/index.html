@@ -797,7 +797,14 @@ async function fetchJiraBacklog() {
     type: i.fields.issuetype?.name || 'Story',
     beEffort: parseFloat(i.fields[settings.fieldBE]) || 0,
     feEffort: parseFloat(i.fields[settings.fieldFE]) || 0,
-    priorityValue: parseFloat(i.fields[settings.fieldPV]) || 999,
+    priorityValue: (() => {
+      const pv = i.fields[settings.fieldPV];
+      if (!pv) return 999;
+      // Dropdown field: { value: '1' } veya { value: 'P1' } veya direkt sayı
+      const raw = typeof pv === 'object' ? (pv.value || pv.name || '') : pv;
+      const num = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+      return isNaN(num) ? 999 : num;
+    })(),
   })).sort((a,b) => a.priorityValue - b.priorityValue);
   renderBacklog(backlogItems);
   settings.connected = true;
