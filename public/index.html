@@ -764,7 +764,9 @@ async function loadBacklog() {
       return;
     } catch(e) {
       console.error('Jira fetch failed:', e);
-      document.getElementById('backlog-content').innerHTML = `<div class="no-data"><div class="icon">⚠️</div><p>Jira verisi alınamadı: ${e.message}</p><p style="margin-top:8px"><button class="btn btn-secondary btn-sm" onclick="loadBacklog()">Tekrar Dene</button></p></div>`;
+      let errMsg = e.message;
+      try { const j = JSON.parse(e.message); errMsg = j.errorMessages?.join(', ') || j.message || e.message; } catch(_){}
+      document.getElementById('backlog-content').innerHTML = `<div class="no-data"><div class="icon">⚠️</div><p>Jira verisi alınamadı: ${errMsg}</p><p style="font-size:11px;color:var(--text3);margin-top:6px">Ayarlar → Field ID ve Proje Anahtarını kontrol edin</p><p style="margin-top:8px"><button class="btn btn-secondary btn-sm" onclick="loadBacklog()">Tekrar Dene</button></p></div>`;
       return;
     }
   }
@@ -776,13 +778,18 @@ async function loadBacklog() {
 }
 
 async function fetchJiraBacklog() {
-  const jql = `project = "${settings.project}" AND status = "${settings.rfdStatus}" AND sprint not in openSprints() AND sprint not in closedSprints() AND sprint not in futureSprints() ORDER BY "${settings.fieldPV}" ASC`;
+  const jql = `project = ${settings.project} AND status = "READY FOR DEVELOPMENT" AND sprint = empty ORDER BY created DESC`;
   const resp = await jiraFetch('rest/api/3/search', {
     jql,
     maxResults: 100,
     fields: `summary,issuetype,${settings.fieldBE},${settings.fieldFE},${settings.fieldPV}`
   });
-  if (!resp.ok) throw new Error(resp.status);
+  if (!resp.ok) {
+    const errBody = await resp.text();
+    let msg = resp.status + '';
+    try { const j = JSON.parse(errBody); msg = j.errorMessages?.join(', ') || j.message || msg; } catch(_){}
+    throw new Error(msg);
+  }
   const data = await resp.json();
   backlogItems = data.issues.map(i => ({
     key: i.key,

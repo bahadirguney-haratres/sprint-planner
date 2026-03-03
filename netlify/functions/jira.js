@@ -1,6 +1,4 @@
 // netlify/functions/jira.js
-// Jira API proxy — CORS sorununu çözer, çağrılar sunucudan gider
-
 exports.handler = async function(event) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -25,32 +23,30 @@ exports.handler = async function(event) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Authorization header required' }) };
   }
 
-  // Build Jira URL with remaining query params
   const url = new URL(`${base}/${path}`);
-  Object.entries(rest).forEach(([k, v]) => url.searchParams.set(k, v));
+  Object.entries(rest).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) url.searchParams.set(k, v);
+  });
+
+  console.log('Jira request URL:', url.toString());
 
   try {
     const response = await fetch(url.toString(), {
-      method: event.httpMethod === 'GET' ? 'GET' : event.httpMethod,
+      method: 'GET',
       headers: {
         'Authorization': authHeader,
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-      body: event.body || undefined,
     });
 
-    const data = await response.text();
-    return {
-      statusCode: response.status,
-      headers,
-      body: data,
-    };
+    const responseText = await response.text();
+    console.log('Jira status:', response.status);
+    if (!response.ok) console.log('Jira error:', responseText.substring(0, 500));
+
+    return { statusCode: response.status, headers, body: responseText };
   } catch (err) {
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: err.message }),
-    };
+    console.error('Proxy error:', err.message);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
