@@ -776,7 +776,7 @@ async function loadBacklog() {
 }
 
 async function fetchJiraBacklog() {
-  const jql = `project = "${settings.project}" AND status = "${settings.rfdStatus}" AND sprint is EMPTY ORDER BY "${settings.fieldPV}" ASC`;
+  const jql = `project = "${settings.project}" AND status = "${settings.rfdStatus}" AND sprint not in openSprints() AND sprint not in closedSprints() AND sprint not in futureSprints() ORDER BY "${settings.fieldPV}" ASC`;
   const resp = await jiraFetch('rest/api/3/search', {
     jql,
     maxResults: 100,
