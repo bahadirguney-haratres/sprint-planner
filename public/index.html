@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Planner — Jira Integration</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0f;
+    --surface: #111318;
+    --surface2: #181c24;
+    --surface3: #1e2330;
+    --border: #2a2f3d;
+    --border2: #363d50;
+    --accent: #4f8ef7;
+    --accent2: #7c5cfc;
+    --green: #22c55e;
+    --orange: #f97316;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --text: #e8ecf4;
+    --text2: #8892a4;
+    --text3: #4e5668;
+    --be: #4f8ef7;
+    --fe: #a855f7;
+    --radius: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BG */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 0;
+    background: rgba(10,11,15,0.9);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; color: white;
+    letter-spacing: -1px;
+  }
+  .logo h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .header-tabs { display: flex; gap: 4px; }
+  .tab-btn {
+    background: none; border: 1px solid transparent; color: var(--text2);
+    padding: 7px 16px; border-radius: 8px; cursor: pointer;
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+  .connection-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 12px; font-weight: 600; color: var(--text2);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
+  .dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* VIEWS */
+  .view { display: none; padding: 32px 0; }
+  .view.active { display: block; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+  .section-sub { font-size: 14px; color: var(--text2); margin-bottom: 24px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border2); }
+  .card-title {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text2); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title .icon { font-size: 15px; }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); }
+  input, select, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,142,247,0.12);
+  }
+  input::placeholder { color: var(--text3); }
+  select option { background: var(--surface2); }
+
+  /* RANGE SLIDER */
+  .range-wrap { display: flex; align-items: center; gap: 12px; }
+  .range-wrap input[type=range] {
+    flex: 1; padding: 0; border: none; background: none; box-shadow: none;
+    accent-color: var(--accent); cursor: pointer;
+  }
+  .range-val {
+    font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700;
+    color: var(--accent); min-width: 48px; text-align: right;
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: 8px; border: none;
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; letter-spacing: 0.2px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #3d7de8; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(79,142,247,0.3); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--border2); background: var(--surface3); }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .btn-danger:hover { background: rgba(239,68,68,0.25); }
+  .btn-success { background: var(--green); color: #000; }
+  .btn-success:hover { background: #16a34a; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+  /* SETTINGS LAYOUT */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .settings-grid .full { grid-column: 1 / -1; }
+
+  /* CAPACITY VISUAL */
+  .capacity-bar-wrap { margin-top: 8px; }
+  .capacity-bar {
+    height: 10px; border-radius: 5px;
+    background: var(--surface3);
+    overflow: hidden; margin-bottom: 4px;
+  }
+  .capacity-bar-fill {
+    height: 100%; border-radius: 5px;
+    transition: width 0.3s ease;
+  }
+  .capacity-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+  .cap-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .cap-row:last-child { border-bottom: none; }
+  .cap-label { color: var(--text2); }
+  .cap-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+
+  /* TAG */
+  .tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.3px; font-family: 'JetBrains Mono', monospace;
+  }
+  .tag-be { background: rgba(79,142,247,0.15); color: var(--be); border: 1px solid rgba(79,142,247,0.3); }
+  .tag-fe { background: rgba(168,85,247,0.15); color: var(--fe); border: 1px solid rgba(168,85,247,0.3); }
+  .tag-p1 { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .tag-p2 { background: rgba(249,115,22,0.15); color: var(--orange); border: 1px solid rgba(249,115,22,0.3); }
+  .tag-p3 { background: rgba(234,179,8,0.15); color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
+  .tag-p4 { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+
+  /* BACKLOG TABLE */
+  .backlog-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .backlog-toolbar .spacer { flex: 1; }
+  .search-input-wrap { position: relative; }
+  .search-input-wrap input { padding-left: 34px; width: 220px; }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 10px 14px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--text3); border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 12px 14px; font-size: 13px; }
+  .key-link { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .key-link:hover { text-decoration: underline; }
+  .effort-cell { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .no-data { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .no-data .icon { font-size: 40px; margin-bottom: 12px; }
+  .no-data p { font-size: 14px; }
+
+  /* SPRINT PLAN */
+  .plan-header { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .plan-stat {
+    flex: 1; min-width: 150px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+  }
+  .plan-stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-bottom: 6px; }
+  .plan-stat-val { font-size: 28px; font-weight: 800; font-family: 'JetBrains Mono', monospace; letter-spacing: -1px; }
+  .plan-stat-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .plan-stat.be { border-top: 3px solid var(--be); }
+  .plan-stat.fe { border-top: 3px solid var(--fe); }
+  .plan-stat.total { border-top: 3px solid var(--accent2); }
+  .plan-stat.overflow { border-top: 3px solid var(--red); }
+
+  .sprint-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .sprint-col-title {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .sprint-col-title .dot-lg { width: 10px; height: 10px; border-radius: 50%; }
+  .sprint-col-title .dot-be { background: var(--be); box-shadow: 0 0 8px var(--be); }
+  .sprint-col-title .dot-fe { background: var(--fe); box-shadow: 0 0 8px var(--fe); }
+
+  .sprint-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .sprint-item:hover { border-color: var(--border2); transform: translateX(2px); }
+  .sprint-item.overflow { border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.05); }
+  .sprint-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .sprint-item-key { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 600; }
+  .sprint-item-title { font-size: 13px; font-weight: 600; flex: 1; }
+  .sprint-item-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .effort-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  }
+  .effort-be { background: rgba(79,142,247,0.12); color: var(--be); }
+  .effort-fe { background: rgba(168,85,247,0.12); color: var(--fe); }
+  .effort-total { background: rgba(255,255,255,0.06); color: var(--text2); }
+  .overflow-label { color: var(--red); font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+  .capacity-progress-wrap { margin: 20px 0; }
+  .cap-progress-bar {
+    height: 12px; border-radius: 6px; background: var(--surface3); overflow: visible;
+    position: relative; margin-bottom: 6px;
+  }
+  .cap-progress-fill {
+    height: 100%; border-radius: 6px;
+    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+  .cap-progress-fill.be-fill { background: linear-gradient(90deg, var(--be), #6ea8ff); }
+  .cap-progress-fill.fe-fill { background: linear-gradient(90deg, var(--fe), #d08aff); }
+  .cap-progress-fill.over { background: linear-gradient(90deg, var(--red), #ff6b6b); }
+  .cap-prog-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+  .cap-prog-label .over-text { color: var(--red); }
+
+  /* LOADING */
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; padding: 48px; color: var(--text2); font-size: 14px;
+  }
+  .spinner {
+    width: 20px; height: 20px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TOAST */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 18px;
+    font-size: 13px; font-weight: 600;
+    box-shadow: var(--shadow); min-width: 280px;
+    display: flex; align-items: center; gap: 10px;
+    animation: slideIn 0.25s ease;
+  }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error { border-left: 3px solid var(--red); }
+  .toast.info { border-left: 3px solid var(--accent); }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid.three { grid-template-columns: 1fr 1fr; }
+    .settings-grid { grid-template-columns: 1fr; }
+    .sprint-cols { grid-template-columns: 1fr; }
+    .header-tabs { display: none; }
+    .plan-header { gap: 10px; }
+  }
+
+  /* DEMO WARNING */
+  .demo-banner {
+    background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3);
+    border-radius: 8px; padding: 10px 16px;
+    font-size: 12px; color: var(--yellow); margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .fields-hint {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+  }
+  .fields-hint p { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+  .fields-hint code {
+    display: block; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--accent); background: var(--bg); border-radius: 4px;
+    padding: 8px 12px; margin-top: 6px; line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">SP</div>
+        <h1>Sprint<span>Planner</span></h1>
+      </div>
+      <div class="header-tabs">
+        <button class="tab-btn active" onclick="switchView('settings')">⚙ Ayarlar</button>
+        <button class="tab-btn" onclick="switchView('backlog')">📋 Backlog</button>
+        <button class="tab-btn" onclick="switchView('plan')">🚀 Sprint Planı</button>
+      </div>
+      <div class="connection-badge">
+        <div class="dot" id="conn-dot"></div>
+        <span id="conn-label">Bağlı değil</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- SETTINGS VIEW -->
+  <div class="view active" id="view-settings">
+    <div class="section-title">Ayarlar & Yapılandırma</div>
+    <div class="section-sub">Jira bağlantısı, ekip kapasitesi ve sprint parametrelerini yapılandırın.</div>
+
+    <div class="settings-grid">
+
+      <!-- Jira Config -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🔗</span> Jira Bağlantısı</div>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Jira Base URL</label>
+            <input type="text" id="jira-url" placeholder="https://yourcompany.atlassian.net" />
+          </div>
+          <div class="form-group full">
+            <label>E-posta</label>
+            <input type="email" id="jira-email" placeholder="you@company.com" />
+          </div>
+          <div class="form-group full">
+            <label>API Token</label>
+            <input type="password" id="jira-token" placeholder="Jira API Token" />
+          </div>
+          <div class="form-group full">
+            <label>Proje Anahtarı</label>
+            <input type="text" id="jira-project" placeholder="PROJ" style="text-transform:uppercase" />
+          </div>
+        </div>
+        <div class="fields-hint">
+          <p>🔧 Jira'daki özel alan ID'leri (Custom Field IDs):</p>
+          <code>BE Effort → customfield_XXXXX<br>FE Effort → customfield_XXXXX<br>Priority Value → customfield_XXXXX</code>
+          <p style="margin-top:8px;font-size:11px;">Alan ID'lerini Jira Admin → Custom Fields bölümünden bulabilirsiniz.</p>
+        </div>
+        <div class="form-grid" style="margin-top:16px">
+          <div class="form-group">
+            <label>BE Effort Field ID</label>
+            <input type="text" id="field-be" placeholder="customfield_10030" />
+          </div>
+          <div class="form-group">
+            <label>FE Effort Field ID</label>
+            <input type="text" id="field-fe" placeholder="customfield_10031" />
+          </div>
+          <div class="form-group full">
+            <label>Priority Value Field ID</label>
+            <input type="text" id="field-pv" placeholder="customfield_10032" />
+          </div>
+          <div class="form-group full">
+            <label>Ready For Development Status Adı</label>
+            <input type="text" id="rfd-status" placeholder="Ready For Development" value="Ready For Development" />
+          </div>
+        </div>
+        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="testConnection()">🔌 Bağlantıyı Test Et</button>
+          <button class="btn btn-secondary" onclick="saveSettings()">💾 Kaydet</button>
+        </div>
+      </div>
+
+      <!-- Capacity Config -->
+      <div class="card">
+        <div class="card-title"><span class="icon">⚡</span> Sprint Kapasitesi</div>
+
+        <div class="form-grid three">
+          <div class="form-group">
+            <label>Sprint Süresi (Gün)</label>
+            <input type="number" id="sprint-days" value="5" min="1" max="20" oninput="recalcCapacity()" />
+          </div>
+          <div class="form-group">
+            <label>Günlük Saat</label>
+            <input type="number" id="daily-hours" value="8" min="1" max="12" oninput="recalcCapacity()" />
+          </div>
+          <div class="form-group">
+            <label>Effort Birimi</label>
+            <select id="effort-unit" onchange="recalcCapacity()">
+              <option value="hours">Saat</option>
+              <option value="days">Gün</option>
+              <option value="points">Story Point</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="card-title" style="margin-bottom:12px"><span class="icon">👤</span> Backend Ekibi</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>BE Kişi Sayısı</label>
+            <input type="number" id="be-count" value="2" min="1" max="20" oninput="recalcCapacity()" />
+          </div>
+          <div class="form-group">
+            <label>BE Verimlilik (%)</label>
+            <div class="range-wrap">
+              <input type="range" id="be-eff" min="50" max="100" value="80" oninput="document.getElementById('be-eff-val').textContent=this.value+'%'; recalcCapacity()" />
+              <span class="range-val" id="be-eff-val">80%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="card-title" style="margin-bottom:12px"><span class="icon">👤</span> Frontend Ekibi</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>FE Kişi Sayısı</label>
+            <input type="number" id="fe-count" value="2" min="1" max="20" oninput="recalcCapacity()" />
+          </div>
+          <div class="form-group">
+            <label>FE Verimlilik (%)</label>
+            <div class="range-wrap">
+              <input type="range" id="fe-eff" min="50" max="100" value="80" oninput="document.getElementById('fe-eff-val').textContent=this.value+'%'; recalcCapacity()" />
+              <span class="range-val" id="fe-eff-val">80%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="card-title" style="margin-bottom:12px"><span class="icon">🔥</span> Canlı Destek Rezervasyonu</div>
+        <div class="form-group">
+          <label>Canlı Destek Kapasitesi (%)</label>
+          <div class="range-wrap">
+            <input type="range" id="buffer-pct" min="0" max="50" value="20"
+              oninput="document.getElementById('buffer-val').textContent=this.value+'%'; recalcCapacity()" />
+            <span class="range-val" id="buffer-val">20%</span>
+          </div>
+        </div>
+        <div style="font-size:12px; color:var(--text2); margin-top:4px;">
+          Bu yüzde, canlı ortamda oluşabilecek acil durumlar için ayrılır ve planlamaya dahil edilmez.
+        </div>
+      </div>
+
+      <!-- Capacity Summary -->
+      <div class="card full">
+        <div class="card-title"><span class="icon">📊</span> Kapasite Özeti</div>
+        <div id="capacity-summary" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:12px;"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BACKLOG VIEW -->
+  <div class="view" id="view-backlog">
+    <div class="section-title">Backlog — Ready For Development</div>
+    <div class="section-sub">Herhangi bir sprint'e atanmamış, geliştirmeye hazır maddeler.</div>
+
+    <div class="demo-banner">⚠ Demo modu: Gerçek Jira bağlantısı için Ayarlar bölümünü doldurun. Şu an örnek verilerle çalışılıyor.
+    </div>
+
+    <div class="backlog-toolbar">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Issue ara..." oninput="filterBacklog()" />
+      </div>
+      <select id="filter-type" onchange="filterBacklog()" style="width:140px">
+        <option value="">Tüm Tipler</option>
+        <option value="Story">Story</option>
+        <option value="Task">Task</option>
+        <option value="Bug">Bug</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn btn-secondary" onclick="loadBacklog()">🔄 Yenile</button>
+      <button class="btn btn-primary" onclick="switchView('plan'); generatePlan()">⚡ Sprint Planı Oluştur</button>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div id="backlog-content">
+        <div class="loading"><div class="spinner"></div> Yükleniyor...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAN VIEW -->
+  <div class="view" id="view-plan">
+    <div class="section-title">Sprint Planı</div>
+    <div class="section-sub">Priority Value'ya göre sıralanmış, kapasite hesaplanmış sprint öneriniz.</div>
+
+    <div id="plan-content">
+      <div class="loading"><div class="spinner"></div> Plan oluşturuluyor...</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let settings = {
+  jiraUrl: '', email: '', token: '', project: '',
+  fieldBE: 'customfield_10030', fieldFE: 'customfield_10031', fieldPV: 'customfield_10032',
+  rfdStatus: 'Ready For Development',
+  sprintDays: 5, dailyHours: 8, effortUnit: 'hours',
+  beCount: 2, beEff: 80,
+  feCount: 2, feEff: 80,
+  bufferPct: 20,
+  connected: false
+};
+
+let backlogItems = [];
+
+// ─── DEMO DATA ───────────────────────────────────────────────────────────────
+const demoData = [
+  { key:'PROJ-101', summary:'Kullanıcı kimlik doğrulama sistemi yenileme', type:'Story', beEffort:16, feEffort:8, priorityValue:1 },
+  { key:'PROJ-102', summary:'Dashboard performans optimizasyonu', type:'Task', beEffort:8, feEffort:24, priorityValue:2 },
+  { key:'PROJ-103', summary:'API rate limiting implementasyonu', type:'Story', beEffort:12, feEffort:0, priorityValue:3 },
+  { key:'PROJ-104', summary:'Mobil responsive düzenlemeler', type:'Task', beEffort:0, feEffort:16, priorityValue:4 },
+  { key:'PROJ-105', summary:'Bildirim servisi entegrasyonu', type:'Story', beEffort:20, feEffort:12, priorityValue:5 },
+  { key:'PROJ-106', summary:'Arama özelliği geliştirmesi', type:'Story', beEffort:10, feEffort:14, priorityValue:6 },
+  { key:'PROJ-107', summary:'Critik login bug düzeltmesi', type:'Bug', beEffort:4, feEffort:4, priorityValue:7 },
+  { key:'PROJ-108', summary:'Raporlama modülü yeni filtreler', type:'Story', beEffort:8, feEffort:20, priorityValue:8 },
+  { key:'PROJ-109', summary:'Veritabanı index optimizasyonu', type:'Task', beEffort:6, feEffort:0, priorityValue:9 },
+  { key:'PROJ-110', summary:'Kullanıcı profil sayfası yeniden tasarım', type:'Story', beEffort:4, feEffort:18, priorityValue:10 },
+  { key:'PROJ-111', summary:'E-posta template güncellemeleri', type:'Task', beEffort:6, feEffort:8, priorityValue:11 },
+  { key:'PROJ-112', summary:'Webhook entegrasyon sistemi', type:'Story', beEffort:14, feEffort:6, priorityValue:12 },
+];
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.onload = () => {
+  loadFromStorage();
+  recalcCapacity();
+  loadBacklog();
+};
+
+function loadFromStorage() {
+  const saved = localStorage.getItem('sprint_planner_settings');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      Object.assign(settings, s);
+      applySettingsToUI();
+    } catch(e) {}
+  }
+}
+
+function applySettingsToUI() {
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+  set('jira-url', settings.jiraUrl);
+  set('jira-email', settings.email);
+  set('jira-token', settings.token);
+  set('jira-project', settings.project);
+  set('field-be', settings.fieldBE);
+  set('field-fe', settings.fieldFE);
+  set('field-pv', settings.fieldPV);
+  set('rfd-status', settings.rfdStatus);
+  set('sprint-days', settings.sprintDays);
+  set('daily-hours', settings.dailyHours);
+  set('effort-unit', settings.effortUnit);
+  set('be-count', settings.beCount);
+  set('be-eff', settings.beEff);
+  set('fe-count', settings.feCount);
+  set('fe-eff', settings.feEff);
+  set('buffer-pct', settings.bufferPct);
+  document.getElementById('be-eff-val').textContent = settings.beEff + '%';
+  document.getElementById('fe-eff-val').textContent = settings.feEff + '%';
+  document.getElementById('buffer-val').textContent = settings.bufferPct + '%';
+}
+
+function saveSettings() {
+  settings.jiraUrl = document.getElementById('jira-url').value.trim();
+  settings.email = document.getElementById('jira-email').value.trim();
+  settings.token = document.getElementById('jira-token').value.trim();
+  settings.project = document.getElementById('jira-project').value.trim().toUpperCase();
+  settings.fieldBE = document.getElementById('field-be').value.trim();
+  settings.fieldFE = document.getElementById('field-fe').value.trim();
+  settings.fieldPV = document.getElementById('field-pv').value.trim();
+  settings.rfdStatus = document.getElementById('rfd-status').value.trim();
+  settings.sprintDays = parseInt(document.getElementById('sprint-days').value) || 5;
+  settings.dailyHours = parseInt(document.getElementById('daily-hours').value) || 8;
+  settings.effortUnit = document.getElementById('effort-unit').value;
+  settings.beCount = parseInt(document.getElementById('be-count').value) || 1;
+  settings.beEff = parseInt(document.getElementById('be-eff').value) || 80;
+  settings.feCount = parseInt(document.getElementById('fe-count').value) || 1;
+  settings.feEff = parseInt(document.getElementById('fe-eff').value) || 80;
+  settings.bufferPct = parseInt(document.getElementById('buffer-pct').value) || 20;
+  localStorage.setItem('sprint_planner_settings', JSON.stringify(settings));
+  toast('Ayarlar kaydedildi', 'success');
+  recalcCapacity();
+}
+
+// ─── CAPACITY ─────────────────────────────────────────────────────────────────
+function getCapacity() {
+  const days = parseInt(document.getElementById('sprint-days')?.value) || settings.sprintDays;
+  const hours = parseInt(document.getElementById('daily-hours')?.value) || settings.dailyHours;
+  const beCount = parseInt(document.getElementById('be-count')?.value) || settings.beCount;
+  const feCount = parseInt(document.getElementById('fe-count')?.value) || settings.feCount;
+  const beEff = parseInt(document.getElementById('be-eff')?.value) || settings.beEff;
+  const feEff = parseInt(document.getElementById('fe-eff')?.value) || settings.feEff;
+  const bufferPct = parseInt(document.getElementById('buffer-pct')?.value) || settings.bufferPct;
+  const unit = document.getElementById('effort-unit')?.value || settings.effortUnit;
+
+  let totalPerPerson = days * hours;
+  if (unit === 'days') totalPerPerson = days;
+  if (unit === 'points') totalPerPerson = days * 8;
+
+  const beTotal = totalPerPerson * beCount;
+  const feTotal = totalPerPerson * feCount;
+  const beEffective = Math.floor(beTotal * (beEff/100) * (1 - bufferPct/100));
+  const feEffective = Math.floor(feTotal * (feEff/100) * (1 - bufferPct/100));
+  const beBuffer = Math.floor(beTotal * (beEff/100) * (bufferPct/100));
+  const feBuffer = Math.floor(feTotal * (feEff/100) * (bufferPct/100));
+  const unitLabel = unit === 'hours' ? 's' : unit === 'days' ? 'g' : 'sp';
+
+  return { beTotal, feTotal, beEffective, feEffective, beBuffer, feBuffer, totalPerPerson, unit, unitLabel, bufferPct, beEff, feEff, beCount, feCount, days, hours };
+}
+
+function recalcCapacity() {
+  const cap = getCapacity();
+  const c = document.getElementById('capacity-summary');
+  if (!c) return;
+
+  const stats = [
+    { label: 'BE Planlama Kapasitesi', val: cap.beEffective + cap.unitLabel, sub: `${cap.beCount} kişi × verimlilik`, color: 'var(--be)' },
+    { label: 'FE Planlama Kapasitesi', val: cap.feEffective + cap.unitLabel, sub: `${cap.feCount} kişi × verimlilik`, color: 'var(--fe)' },
+    { label: 'BE Canlı Destek', val: cap.beBuffer + cap.unitLabel, sub: `%${cap.bufferPct} rezerve`, color: 'var(--orange)' },
+    { label: 'FE Canlı Destek', val: cap.feBuffer + cap.unitLabel, sub: `%${cap.bufferPct} rezerve`, color: 'var(--orange)' },
+    { label: 'BE Ham Kapasite', val: Math.floor(cap.beTotal * cap.beEff/100) + cap.unitLabel, sub: `%${cap.beEff} verimlilik`, color: 'var(--text2)' },
+    { label: 'FE Ham Kapasite', val: Math.floor(cap.feTotal * cap.feEff/100) + cap.unitLabel, sub: `%${cap.feEff} verimlilik`, color: 'var(--text2)' },
+  ];
+
+  c.innerHTML = stats.map(s => `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-top:3px solid ${s.color}">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);margin-bottom:6px">${s.label}</div>
+      <div style="font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-1px;color:${s.color}">${s.val}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px">${s.sub}</div>
+    </div>
+  `).join('');
+}
+
+// ─── CONNECTION TEST ──────────────────────────────────────────────────────────
+// Proxy üzerinden Jira API çağrısı
+function jiraFetch(path, params = {}) {
+  const creds = btoa(`${settings.email}:${settings.token}`);
+  const qs = new URLSearchParams({ path, base: settings.jiraUrl, ...params });
+  return fetch(`/api/jira?${qs.toString()}`, {
+    headers: { 'Authorization': `Basic ${creds}`, 'Accept': 'application/json' }
+  });
+}
+
+async function testConnection() {
+  saveSettings();
+  if (!settings.jiraUrl || !settings.email || !settings.token) {
+    toast('Jira URL, e-posta ve API token gerekli', 'error'); return;
+  }
+  toast('Bağlantı test ediliyor...', 'info');
+
+  try {
+    const resp = await jiraFetch('rest/api/3/myself');
+    if (resp.ok) {
+      const data = await resp.json();
+      settings.connected = true;
+      updateConnectionBadge(true, data.displayName || 'Bağlı');
+      toast(`Bağlantı başarılı: ${data.displayName}`, 'success');
+    } else {
+      const err = await resp.json();
+      toast(`Jira hatası: ${err.message || resp.status}`, 'error');
+      settings.connected = false;
+      updateConnectionBadge(false);
+    }
+  } catch(e) {
+    toast(`Bağlantı hatası: ${e.message}`, 'error');
+    settings.connected = false;
+    updateConnectionBadge(false);
+  }
+}
+
+function updateConnectionBadge(connected, name) {
+  document.getElementById('conn-dot').className = 'dot' + (connected ? ' connected' : '');
+  document.getElementById('conn-label').textContent = connected ? name : 'Bağlı değil';
+}
+
+// ─── BACKLOG ──────────────────────────────────────────────────────────────────
+async function loadBacklog() {
+  document.getElementById('backlog-content').innerHTML = '<div class="loading"><div class="spinner"></div> Yükleniyor...</div>';
+
+  if (settings.connected && settings.jiraUrl && settings.token) {
+    try {
+      await fetchJiraBacklog();
+      return;
+    } catch(e) {
+      console.warn('Jira fetch failed, using demo data:', e);
+    }
+  }
+
+  // Demo mode
+  await new Promise(r => setTimeout(r, 600));
+  backlogItems = [...demoData];
+  renderBacklog(backlogItems);
+}
+
+async function fetchJiraBacklog() {
+  const jql = `project = "${settings.project}" AND status = "${settings.rfdStatus}" AND sprint is EMPTY ORDER BY "${settings.fieldPV}" ASC`;
+  const resp = await jiraFetch('rest/api/3/search', {
+    jql,
+    maxResults: 100,
+    fields: `summary,issuetype,${settings.fieldBE},${settings.fieldFE},${settings.fieldPV}`
+  });
+  if (!resp.ok) throw new Error(resp.status);
+  const data = await resp.json();
+  backlogItems = data.issues.map(i => ({
+    key: i.key,
+    summary: i.fields.summary,
+    type: i.fields.issuetype?.name || 'Story',
+    beEffort: parseFloat(i.fields[settings.fieldBE]) || 0,
+    feEffort: parseFloat(i.fields[settings.fieldFE]) || 0,
+    priorityValue: parseFloat(i.fields[settings.fieldPV]) || 999,
+  })).sort((a,b) => a.priorityValue - b.priorityValue);
+  renderBacklog(backlogItems);
+  settings.connected = true;
+  updateConnectionBadge(true, 'Jira');
+}
+
+function filterBacklog() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const type = document.getElementById('filter-type').value;
+  const filtered = backlogItems.filter(i =>
+    (!q || i.key.toLowerCase().includes(q) || i.summary.toLowerCase().includes(q)) &&
+    (!type || i.type === type)
+  );
+  renderBacklog(filtered);
+}
+
+function renderBacklog(items) {
+  const unit = document.getElementById('effort-unit')?.value || settings.effortUnit;
+  const ul = unit === 'hours' ? 's' : unit === 'days' ? 'g' : 'sp';
+  if (!items.length) {
+    document.getElementById('backlog-content').innerHTML = `
+      <div class="no-data"><div class="icon">📭</div><p>Hiç madde bulunamadı.</p></div>`;
+    return;
+  }
+  document.getElementById('backlog-content').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Anahtar</th>
+          <th>Başlık</th>
+          <th>Tip</th>
+          <th>BE Effort</th>
+          <th>FE Effort</th>
+          <th>Priority</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(i => {
+          const pc = i.priorityValue <= 3 ? 'p1' : i.priorityValue <= 6 ? 'p2' : i.priorityValue <= 9 ? 'p3' : 'p4';
+          return `<tr>
+            <td><span class="key-link">${i.key}</span></td>
+            <td style="max-width:340px">${i.summary}</td>
+            <td><span class="tag tag-${i.type === 'Bug' ? 'p1' : 'be'}">${i.type}</span></td>
+            <td class="effort-cell"><span class="tag tag-be">${i.beEffort}${ul}</span></td>
+            <td class="effort-cell"><span class="tag tag-fe">${i.feEffort}${ul}</span></td>
+            <td><span class="tag tag-${pc}">P${i.priorityValue}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ─── SPRINT PLAN ──────────────────────────────────────────────────────────────
+function generatePlan() {
+  if (!backlogItems.length) {
+    document.getElementById('plan-content').innerHTML = `
+      <div class="no-data"><div class="icon">📋</div><p>Önce backlog'u yükleyin.</p></div>`;
+    return;
+  }
+
+  const cap = getCapacity();
+  const unit = cap.unitLabel;
+
+  // Sort by priority
+  const sorted = [...backlogItems].sort((a,b) => a.priorityValue - b.priorityValue);
+
+  let beUsed = 0, feUsed = 0;
+  const beItems = [], feItems = [], overflowItems = [];
+
+  for (const item of sorted) {
+    const beNeeded = item.beEffort || 0;
+    const feNeeded = item.feEffort || 0;
+
+    // Check if fits
+    const beOk = beNeeded === 0 || (beUsed + beNeeded <= cap.beEffective);
+    const feOk = feNeeded === 0 || (feUsed + feNeeded <= cap.feEffective);
+
+    if (beOk && feOk) {
+      if (beNeeded > 0) { beUsed += beNeeded; beItems.push(item); }
+      if (feNeeded > 0) { feUsed += feNeeded; feItems.push({ ...item, _beOnly: beNeeded > 0 }); }
+      if (beNeeded === 0 && feNeeded === 0) { beItems.push(item); } // fallback
+    } else {
+      overflowItems.push({ ...item, _beOver: !beOk, _feOver: !feOk });
+    }
+  }
+
+  // Unique items in sprint (union)
+  const inSprintKeys = new Set([...beItems.map(i=>i.key), ...feItems.map(i=>i.key)]);
+  const inSprint = sorted.filter(i => inSprintKeys.has(i.key));
+
+  const bePct = Math.min(100, Math.round(beUsed / cap.beEffective * 100));
+  const fePct = Math.min(100, Math.round(feUsed / cap.feEffective * 100));
+
+  document.getElementById('plan-content').innerHTML = `
+    <div class="plan-header">
+      <div class="plan-stat be">
+        <div class="plan-stat-label">BE Kullanılan</div>
+        <div class="plan-stat-val" style="color:var(--be)">${beUsed}${unit}</div>
+        <div class="plan-stat-sub">/ ${cap.beEffective}${unit} kullanılabilir (%${bePct})</div>
+      </div>
+      <div class="plan-stat fe">
+        <div class="plan-stat-label">FE Kullanılan</div>
+        <div class="plan-stat-val" style="color:var(--fe)">${feUsed}${unit}</div>
+        <div class="plan-stat-sub">/ ${cap.feEffective}${unit} kullanılabilir (%${fePct})</div>
+      </div>
+      <div class="plan-stat total">
+        <div class="plan-stat-label">Sprint'teki Madde</div>
+        <div class="plan-stat-val">${inSprint.length}</div>
+        <div class="plan-stat-sub">${overflowItems.length} madde sığmadı</div>
+      </div>
+      <div class="plan-stat" style="border-top:3px solid var(--orange)">
+        <div class="plan-stat-label">Canlı Destek Rezerve</div>
+        <div class="plan-stat-val" style="color:var(--orange)">%${cap.bufferPct}</div>
+        <div class="plan-stat-sub">BE: ${cap.beBuffer}${unit} / FE: ${cap.feBuffer}${unit}</div>
+      </div>
+    </div>
+
+    <!-- Progress Bars -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title"><span class="icon">📊</span> Kapasite Kullanımı</div>
+      <div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:6px;font-family:'JetBrains Mono',monospace">
+          <span>Backend — ${beUsed}${unit} / ${cap.beEffective}${unit}</span>
+          <span style="color:${bePct>90?'var(--red)':'var(--be)'}">${bePct}%</span>
+        </div>
+        <div class="cap-progress-bar">
+          <div class="cap-progress-fill be-fill ${bePct>100?'over':''}" style="width:${Math.min(bePct,100)}%"></div>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:6px;font-family:'JetBrains Mono',monospace">
+          <span>Frontend — ${feUsed}${unit} / ${cap.feEffective}${unit}</span>
+          <span style="color:${fePct>90?'var(--red)':'var(--fe)'}">${fePct}%</span>
+        </div>
+        <div class="cap-progress-bar">
+          <div class="cap-progress-fill fe-fill ${fePct>100?'over':''}" style="width:${Math.min(fePct,100)}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sprint Items -->
+    <div class="sprint-cols">
+      <div>
+        <div class="sprint-col-title">
+          <div class="dot-lg dot-be"></div> Backend Sprint Items
+          <span style="font-size:11px;font-weight:400;color:var(--text2);text-transform:none;letter-spacing:0">(${beItems.length} madde)</span>
+        </div>
+        ${beItems.map(i => renderSprintItem(i, 'be', unit)).join('')}
+        ${beItems.length === 0 ? '<div style="color:var(--text3);font-size:13px;padding:20px">BE effortu olan madde yok.</div>' : ''}
+      </div>
+      <div>
+        <div class="sprint-col-title">
+          <div class="dot-lg dot-fe"></div> Frontend Sprint Items
+          <span style="font-size:11px;font-weight:400;color:var(--text2);text-transform:none;letter-spacing:0">(${feItems.length} madde)</span>
+        </div>
+        ${feItems.map(i => renderSprintItem(i, 'fe', unit)).join('')}
+        ${feItems.length === 0 ? '<div style="color:var(--text3);font-size:13px;padding:20px">FE effortu olan madde yok.</div>' : ''}
+      </div>
+    </div>
+
+    ${overflowItems.length ? `
+    <div class="card" style="margin-top:20px; border-color: rgba(239,68,68,0.3)">
+      <div class="card-title" style="color:var(--red)"><span class="icon">⚠</span> Sığmayan Maddeler (Sonraki Sprint)</div>
+      ${overflowItems.map(i => renderSprintItem(i, 'overflow', unit)).join('')}
+    </div>` : ''}
+
+    <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="exportPlan()">📥 CSV İndir</button>
+      <button class="btn btn-primary" onclick="copyPlanSummary()">📋 Özet Kopyala</button>
+    </div>
+  `;
+}
+
+function renderSprintItem(item, type, unit) {
+  const pc = item.priorityValue <= 3 ? 'p1' : item.priorityValue <= 6 ? 'p2' : item.priorityValue <= 9 ? 'p3' : 'p4';
+  const isOverflow = type === 'overflow';
+  return `
+    <div class="sprint-item ${isOverflow ? 'overflow' : ''}">
+      <div class="sprint-item-header">
+        <span class="sprint-item-key">${item.key}</span>
+        <span class="sprint-item-title">${item.summary}</span>
+      </div>
+      <div class="sprint-item-meta">
+        <span class="tag tag-${pc}">P${item.priorityValue}</span>
+        ${item.beEffort ? `<span class="effort-pill effort-be">BE ${item.beEffort}${unit}</span>` : ''}
+        ${item.feEffort ? `<span class="effort-pill effort-fe">FE ${item.feEffort}${unit}</span>` : ''}
+        ${isOverflow ? `<span class="overflow-label">⚠ Kapasite aşımı</span>` : ''}
+      </div>
+    </div>`;
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function exportPlan() {
+  const cap = getCapacity();
+  const sorted = [...backlogItems].sort((a,b) => a.priorityValue - b.priorityValue);
+  let beUsed = 0, feUsed = 0;
+  const rows = [['Key','Summary','Type','BE Effort','FE Effort','Priority','Sprint Status']];
+  for (const item of sorted) {
+    const beOk = item.beEffort === 0 || (beUsed + item.beEffort <= cap.beEffective);
+    const feOk = item.feEffort === 0 || (feUsed + item.feEffort <= cap.feEffective);
+    const inSprint = beOk && feOk;
+    if (inSprint) { beUsed += item.beEffort || 0; feUsed += item.feEffort || 0; }
+    rows.push([item.key, `"${item.summary}"`, item.type, item.beEffort, item.feEffort, item.priorityValue, inSprint ? 'Sprint' : 'Backlog']);
+  }
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'sprint-plan.csv';
+  a.click();
+  toast('CSV indirildi', 'success');
+}
+
+function copyPlanSummary() {
+  const cap = getCapacity();
+  const sorted = [...backlogItems].sort((a,b) => a.priorityValue - b.priorityValue);
+  let beUsed = 0, feUsed = 0, count = 0;
+  for (const item of sorted) {
+    const beOk = item.beEffort === 0 || (beUsed + item.beEffort <= cap.beEffective);
+    const feOk = item.feEffort === 0 || (feUsed + item.feEffort <= cap.feEffective);
+    if (beOk && feOk) { beUsed += item.beEffort || 0; feUsed += item.feEffort || 0; count++; }
+  }
+  const text = `Sprint Planı Özeti\nMadde Sayısı: ${count}\nBE Kullanım: ${beUsed}/${cap.beEffective}${cap.unitLabel}\nFE Kullanım: ${feUsed}/${cap.feEffective}${cap.unitLabel}\nCanlı Destek Rezervi: %${cap.bufferPct}`;
+  navigator.clipboard.writeText(text).then(() => toast('Özet kopyalandı', 'success'));
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name)?.classList.add('active');
+  const idx = { settings: 0, backlog: 1, plan: 2 }[name];
+  document.querySelectorAll('.tab-btn')[idx]?.classList.add('active');
+  if (name === 'plan') generatePlan();
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+</script>
+</body>
+</html>
