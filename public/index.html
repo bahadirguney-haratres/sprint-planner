@@ -779,7 +779,7 @@ async function loadBacklog() {
 
 async function fetchJiraBacklog() {
   const jql = `project = ${settings.project} AND status = "READY FOR DEVELOPMENT" AND sprint = empty ORDER BY created DESC`;
-  const resp = await jiraFetch('rest/api/3/search', {
+  const resp = await jiraFetch('rest/api/3/search/jql', {
     jql,
     maxResults: 100,
     fields: `summary,issuetype,${settings.fieldBE},${settings.fieldFE},${settings.fieldPV}`
