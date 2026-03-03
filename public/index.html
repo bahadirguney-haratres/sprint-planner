@@ -380,6 +380,83 @@
   .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
   .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
 
+
+  /* ── SPRINT DASHBOARD ──────────────────────────────────────────── */
+  .dash-hero {
+    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px;
+  }
+  .dash-stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px;
+    transition: border-color 0.2s;
+  }
+  .dash-stat:hover { border-color: var(--border2); }
+  .dash-stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 8px; }
+  .dash-stat-val { font-size: 32px; font-weight: 800; font-family: 'JetBrains Mono', monospace; letter-spacing: -1.5px; line-height: 1; }
+  .dash-stat-sub { font-size: 12px; color: var(--text2); margin-top: 6px; }
+
+  /* Radial progress */
+  .dash-progress-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px;
+    display: flex; align-items: center; gap: 32px; margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .radial-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+  .radial-wrap svg { transform: rotate(-90deg); }
+  .radial-track { fill: none; stroke: var(--surface3); stroke-width: 10; }
+  .radial-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(0.34,1.56,0.64,1); }
+  .radial-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .radial-pct { font-size: 28px; font-weight: 800; font-family: 'JetBrains Mono', monospace; letter-spacing: -1px; }
+  .radial-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-top: 2px; }
+  .dash-progress-info { flex: 1; min-width: 200px; }
+  .dash-progress-info h3 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .dash-progress-info p { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+  .dash-legend { display: flex; flex-direction: column; gap: 10px; }
+  .dash-legend-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .dash-legend-left { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .dash-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dash-legend-count { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text2); }
+
+  /* Issue list */
+  .dash-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .dash-col-title {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  .dash-issue {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; transition: all 0.15s;
+  }
+  .dash-issue:hover { border-color: var(--border2); transform: translateX(2px); }
+  .dash-issue-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .dash-issue-key { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 600; }
+  .dash-issue-title { font-size: 13px; font-weight: 600; flex: 1; }
+  .dash-issue-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .status-pill {
+    padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.2px;
+  }
+  .status-done { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .status-progress { background: rgba(79,142,247,0.15); color: var(--be); border: 1px solid rgba(79,142,247,0.3); }
+  .status-other { background: rgba(255,255,255,0.05); color: var(--text2); border: 1px solid var(--border); }
+
+  .sprint-input-bar {
+    display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 20px; margin-bottom: 24px;
+  }
+  .sprint-input-bar .form-group { margin-bottom: 0; min-width: 160px; }
+  .sprint-input-bar .form-group label { margin-bottom: 6px; display: block; }
+
+  @media (max-width: 768px) {
+    .dash-hero { grid-template-columns: 1fr 1fr; }
+    .dash-cols { grid-template-columns: 1fr; }
+  }
+
   /* RESPONSIVE */
   @media (max-width: 768px) {
     .form-grid { grid-template-columns: 1fr; }
@@ -423,6 +500,7 @@
         <button class="tab-btn active" onclick="switchView('settings')">⚙ Ayarlar</button>
         <button class="tab-btn" onclick="switchView('backlog')">📋 Backlog</button>
         <button class="tab-btn" onclick="switchView('plan')">🚀 Sprint Planı</button>
+        <button class="tab-btn" onclick="switchView('dashboard')">📊 Dashboard</button>
       </div>
       <div class="connection-badge">
         <div class="dot" id="conn-dot"></div>
@@ -607,6 +685,36 @@
     <div class="card" style="padding:0; overflow:hidden;">
       <div id="backlog-content">
         <div class="loading"><div class="spinner"></div> Yükleniyor...</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- DASHBOARD VIEW -->
+  <div class="view" id="view-dashboard">
+    <div class="section-title">Sprint Dashboard</div>
+    <div class="section-sub">Aktif sprint'in ilerleme durumu ve madde detayları.</div>
+
+    <!-- Sprint ID Input -->
+    <div class="sprint-input-bar">
+      <div class="form-group">
+        <label>Sprint ID</label>
+        <input type="text" id="dash-sprint-id" placeholder="Örn: 466" style="width:160px"
+          onkeydown="if(event.key==='Enter') loadDashboard()" />
+      </div>
+      <div class="form-group">
+        <label>Tamamlandı Statüsü</label>
+        <input type="text" id="dash-done-status" placeholder="READY FOR UAT" value="READY FOR UAT" style="width:200px" />
+      </div>
+      <button class="btn btn-primary" onclick="loadDashboard()">📊 Yükle</button>
+      <div style="flex:1"></div>
+      <div id="dash-sprint-label" style="font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace"></div>
+    </div>
+
+    <div id="dashboard-content">
+      <div style="text-align:center;padding:60px;color:var(--text3)">
+        <div style="font-size:40px;margin-bottom:12px">📊</div>
+        <p style="font-size:14px">Sprint ID girerek dashboard'u yükleyin.</p>
       </div>
     </div>
   </div>
@@ -1261,12 +1369,215 @@ function copyPlanSummary() {
   navigator.clipboard.writeText(text).then(() => toast('Özet kopyalandı', 'success'));
 }
 
+
+// ─── SPRINT DASHBOARD ─────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const sprintId = document.getElementById('dash-sprint-id').value.trim();
+  if (!sprintId) { toast('Sprint ID gerekli', 'error'); return; }
+  if (!settings.connected || !settings.jiraUrl || !settings.token) {
+    toast('Önce Jira bağlantısı kurun', 'error'); return;
+  }
+
+  const container = document.getElementById('dashboard-content');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div> Sprint verileri yükleniyor...</div>';
+
+  const doneStatus = (document.getElementById('dash-done-status').value.trim() || 'READY FOR UAT').toUpperCase();
+
+  try {
+    const jql = `project = ${settings.project} AND sprint = ${sprintId} ORDER BY created DESC`;
+    const resp = await jiraFetch('rest/api/3/search/jql', {
+      jql,
+      maxResults: 200,
+      fields: `summary,status,issuetype,assignee,${settings.fieldBE},${settings.fieldFE},${settings.fieldPV}`
+    });
+
+    if (!resp.ok) {
+      const errBody = await resp.text();
+      let msg = resp.status + '';
+      try { const j = JSON.parse(errBody); msg = j.errorMessages?.join(', ') || j.message || msg; } catch(_){}
+      throw new Error(msg);
+    }
+
+    const data = await resp.json();
+    const issues = data.issues || [];
+
+    if (!issues.length) {
+      container.innerHTML = '<div class="no-data"><div class="icon">📭</div><p>Bu sprint'te madde bulunamadı.</p></div>';
+      return;
+    }
+
+    // Sprint adını göster
+    document.getElementById('dash-sprint-label').textContent = `${issues.length} madde · Sprint ${sprintId}`;
+
+    // Kategorize et
+    const done = issues.filter(i => i.fields.status?.name?.toUpperCase() === doneStatus);
+    const inProgress = issues.filter(i => i.fields.status?.name?.toUpperCase() !== doneStatus);
+
+    const total = issues.length;
+    const donePct = Math.round(done.length / total * 100);
+
+    // Status dağılımı
+    const statusMap = {};
+    issues.forEach(i => {
+      const s = i.fields.status?.name || 'Unknown';
+      statusMap[s] = (statusMap[s] || 0) + 1;
+    });
+
+    // Effort toplamları
+    const totalBE = issues.reduce((s, i) => s + (parseFloat(i.fields[settings.fieldBE]) || 0), 0);
+    const totalFE = issues.reduce((s, i) => s + (parseFloat(i.fields[settings.fieldFE]) || 0), 0);
+    const doneBE = done.reduce((s, i) => s + (parseFloat(i.fields[settings.fieldBE]) || 0), 0);
+    const doneFE = done.reduce((s, i) => s + (parseFloat(i.fields[settings.fieldFE]) || 0), 0);
+    const ul = settings.effortUnit === 'hours' ? 's' : settings.effortUnit === 'days' ? 'g' : 'sp';
+
+    // Renk paleti için statüs rengi
+    const statusColors = [
+      'var(--green)', 'var(--be)', 'var(--fe)', 'var(--orange)', 'var(--yellow)', 'var(--red)', 'var(--text2)'
+    ];
+
+    container.innerHTML = `
+      <!-- Hero stats -->
+      <div class="dash-hero">
+        <div class="dash-stat" style="border-top: 3px solid var(--accent2)">
+          <div class="dash-stat-label">Toplam Madde</div>
+          <div class="dash-stat-val">${total}</div>
+          <div class="dash-stat-sub">Sprint ${sprintId}</div>
+        </div>
+        <div class="dash-stat" style="border-top: 3px solid var(--green)">
+          <div class="dash-stat-label">Tamamlanan</div>
+          <div class="dash-stat-val" style="color:var(--green)">${done.length}</div>
+          <div class="dash-stat-sub">${doneStatus}</div>
+        </div>
+        <div class="dash-stat" style="border-top: 3px solid var(--be)">
+          <div class="dash-stat-label">Devam Eden</div>
+          <div class="dash-stat-val" style="color:var(--be)">${inProgress.length}</div>
+          <div class="dash-stat-sub">${inProgress.length} madde kaldı</div>
+        </div>
+        <div class="dash-stat" style="border-top: 3px solid var(--orange)">
+          <div class="dash-stat-label">Tamamlanma</div>
+          <div class="dash-stat-val" style="color:${donePct >= 80 ? 'var(--green)' : donePct >= 50 ? 'var(--orange)' : 'var(--red)'}">${donePct}%</div>
+          <div class="dash-stat-sub">${done.length} / ${total} madde</div>
+        </div>
+      </div>
+
+      <!-- Radial progress + legend -->
+      <div class="dash-progress-wrap">
+        <div class="radial-wrap">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <circle class="radial-track" cx="70" cy="70" r="60"/>
+            <circle class="radial-fill" cx="70" cy="70" r="60"
+              stroke="${donePct >= 80 ? 'var(--green)' : donePct >= 50 ? 'var(--orange)' : 'var(--red)'}"
+              stroke-dasharray="${2 * Math.PI * 60}"
+              stroke-dashoffset="${2 * Math.PI * 60 * (1 - donePct / 100)}"
+              id="radial-arc"/>
+          </svg>
+          <div class="radial-center">
+            <div class="radial-pct" style="color:${donePct >= 80 ? 'var(--green)' : donePct >= 50 ? 'var(--orange)' : 'var(--red)'}">${donePct}%</div>
+            <div class="radial-lbl">Tamamlandı</div>
+          </div>
+        </div>
+
+        <div class="dash-progress-info">
+          <h3>Sprint ${sprintId} İlerleme Durumu</h3>
+          <p>${done.length} madde tamamlandı, ${inProgress.length} madde devam ediyor</p>
+
+          ${totalBE || totalFE ? `
+          <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+            ${totalBE ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);margin-bottom:4px">BE Effort</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--be)">${doneBE}${ul} <span style="color:var(--text3);font-size:12px">/ ${totalBE}${ul}</span></div>
+            </div>` : ''}
+            ${totalFE ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);margin-bottom:4px">FE Effort</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--fe)">${doneFE}${ul} <span style="color:var(--text3);font-size:12px">/ ${totalFE}${ul}</span></div>
+            </div>` : ''}
+          </div>` : ''}
+
+          <div class="dash-legend">
+            ${Object.entries(statusMap).sort((a,b) => b[1]-a[1]).map(([status, count], i) => `
+              <div class="dash-legend-item">
+                <div class="dash-legend-left">
+                  <div class="dash-legend-dot" style="background:${status.toUpperCase() === doneStatus ? 'var(--green)' : statusColors[i % statusColors.length]}"></div>
+                  <span>${status}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:80px;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden">
+                    <div style="height:100%;width:${Math.round(count/total*100)}%;background:${status.toUpperCase() === doneStatus ? 'var(--green)' : statusColors[i % statusColors.length]};border-radius:3px"></div>
+                  </div>
+                  <span class="dash-legend-count">${count}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Issue columns -->
+      <div class="dash-cols">
+        <div>
+          <div class="dash-col-title">
+            <div class="dash-legend-dot" style="width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)"></div>
+            Tamamlanan
+            <span style="font-size:11px;font-weight:400;color:var(--text2);text-transform:none;letter-spacing:0">(${done.length} madde)</span>
+          </div>
+          ${done.length === 0 ? '<div style="color:var(--text3);font-size:13px;padding:20px;text-align:center">Henüz tamamlanan madde yok.</div>' : ''}
+          ${done.map(i => renderDashIssue(i, 'done', ul, doneStatus)).join('')}
+        </div>
+        <div>
+          <div class="dash-col-title">
+            <div class="dash-legend-dot" style="width:10px;height:10px;border-radius:50%;background:var(--be);box-shadow:0 0 8px var(--be)"></div>
+            Devam Eden
+            <span style="font-size:11px;font-weight:400;color:var(--text2);text-transform:none;letter-spacing:0">(${inProgress.length} madde)</span>
+          </div>
+          ${inProgress.length === 0 ? '<div style="color:var(--green);font-size:13px;padding:20px;text-align:center">🎉 Tüm maddeler tamamlandı!</div>' : ''}
+          ${inProgress.map(i => renderDashIssue(i, 'progress', ul, doneStatus)).join('')}
+        </div>
+      </div>
+    `;
+
+  } catch(e) {
+    container.innerHTML = `<div class="no-data"><div class="icon">⚠️</div><p>Veri alınamadı: ${e.message}</p></div>`;
+  }
+}
+
+function renderDashIssue(issue, type, ul, doneStatus) {
+  const key = issue.key;
+  const title = issue.fields.summary;
+  const status = issue.fields.status?.name || '';
+  const assignee = issue.fields.assignee?.displayName || '—';
+  const beE = parseFloat(issue.fields[settings.fieldBE]) || 0;
+  const feE = parseFloat(issue.fields[settings.fieldFE]) || 0;
+  const pv = (() => {
+    const pv = issue.fields[settings.fieldPV];
+    if (!pv) return null;
+    const raw = typeof pv === 'object' ? (pv.value || pv.name || '') : pv;
+    const num = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+    return isNaN(num) ? null : num;
+  })();
+  const isDone = status.toUpperCase() === doneStatus;
+
+  return `
+    <div class="dash-issue">
+      <div class="dash-issue-top">
+        <span class="dash-issue-key">${key}</span>
+        <span class="dash-issue-title">${title}</span>
+      </div>
+      <div class="dash-issue-meta">
+        <span class="status-pill ${isDone ? 'status-done' : 'status-progress'}">${status}</span>
+        ${pv !== null ? `<span class="tag tag-${pv<=3?'p1':pv<=6?'p2':pv<=9?'p3':'p4'}">P${pv}</span>` : ''}
+        ${beE ? `<span class="effort-pill effort-be">BE ${beE}${ul}</span>` : ''}
+        ${feE ? `<span class="effort-pill effort-fe">FE ${feE}${ul}</span>` : ''}
+        <span style="font-size:11px;color:var(--text3);margin-left:auto">👤 ${assignee}</span>
+      </div>
+    </div>`;
+}
+
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
 function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name)?.classList.add('active');
-  const idx = { settings: 0, backlog: 1, plan: 2 }[name];
+  const idx = { settings: 0, backlog: 1, plan: 2, dashboard: 3 }[name];
   document.querySelectorAll('.tab-btn')[idx]?.classList.add('active');
   if (name === 'plan') generatePlan();
 }
