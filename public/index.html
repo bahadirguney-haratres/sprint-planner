@@ -157,6 +157,29 @@ tbody td{padding:12px 14px;font-size:13px}
 .toast.err{border-left:3px solid var(--red)}
 .toast.info{border-left:3px solid var(--accent)}
 @keyframes sIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.tmember{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:20px;transition:border-color .2s}
+.tmember:hover{border-color:var(--border2)}
+.tmember-hdr{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0}
+.tmember-name{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.tmember-meta{font-size:12px;color:var(--text2);margin-top:2px}
+.tmember-stats{display:flex;gap:12px;margin-left:auto;flex-wrap:wrap}
+.tstat{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;min-width:80px}
+.tstat-v{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-1px}
+.tstat-l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-top:2px}
+.tcap-bar{height:10px;border-radius:5px;background:var(--surface3);overflow:hidden;margin:12px 0 6px}
+.tcap-fill{height:100%;border-radius:5px;transition:width .6s cubic-bezier(.34,1.56,.64,1)}
+.tcap-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;margin-bottom:16px}
+.tissue{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;margin-bottom:7px;transition:all .15s}
+.tissue:hover{border-color:var(--border2);transform:translateX(2px)}
+.tissue-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.tissue-key{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:none}
+.tissue-key:hover{text-decoration:underline}
+.tissue-title{font-size:13px;font-weight:600;flex:1}
+.tissue-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tno-items{color:var(--text3);font-size:13px;padding:16px 0;text-align:center}
+.team-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.ts-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px}
 @media(max-width:768px){.g2,.g3{grid-template-columns:1fr}.sgrid{grid-template-columns:1fr}.scols,.dcols{grid-template-columns:1fr}.dhero{grid-template-columns:1fr 1fr}.tabs{display:none}}
 </style>
 </head>
@@ -170,6 +193,7 @@ tbody td{padding:12px 14px;font-size:13px}
         <button class="tab" onclick="sv('backlog')">Backlog</button>
         <button class="tab" onclick="sv('plan')">Sprint Plani</button>
         <button class="tab" onclick="sv('dashboard')">Dashboard</button>
+        <button class="tab" onclick="sv('team')">Takim Durumu</button>
       </div>
       <div class="cbadge"><div class="dot" id="cdot"></div><span id="clbl">Baglanmadi</span></div>
     </div>
@@ -272,6 +296,20 @@ tbody td{padding:12px 14px;font-size:13px}
   <div id="dash-content"><div class="empty"><div class="ico">&#128202;</div><p>Sprint ID girerek dashboard'u yukleyin.</p></div></div>
 </div>
 
+
+<div class="view" id="view-team">
+  <div class="ptitle">Takim Durumu</div>
+  <div class="psub">Sprint'teki kullanicilarin is yuklerini, efor dagilimlari ve kapasitelerini gorun</div>
+  <div class="dibar">
+    <div class="fg"><label>Sprint ID</label><input id="f-tsid" type="text" placeholder="466" style="width:140px"></div>
+    <div class="fg"><label>Kapasite (saat/kisi)</label><input id="f-tcap" type="number" value="40" style="width:140px" placeholder="40"></div>
+    <button class="btn bp" id="btn-team">Yukle</button>
+    <div style="flex:1"></div>
+    <span id="team-lbl" style="font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace"></span>
+  </div>
+  <div id="team-content"><div class="empty"><div class="ico">&#128101;</div><p>Sprint ID girerek takim durumunu yukleyin.</p></div></div>
+</div>
+
 </div>
 
 <div class="overlay" id="modal-np">
@@ -347,6 +385,14 @@ function bindAll(){
   $('f-type').onchange = filterBL;
   $('btn-dash').onclick = loadDash;
   $('f-sid').onkeydown = function(e){if(e.key==='Enter')loadDash();};
+  $('btn-team').onclick = loadTeam;
+  $('f-tsid').onkeydown = function(e){if(e.key==='Enter')loadTeam();};
+  // Event delegation for all jlink elements
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.classList.contains('jlink')){
+      openJira(e.target.getAttribute('data-key') || e.target.textContent.trim());
+    }
+  });
   $('modal-np').onclick = function(e){if(e.target===this)closeM('modal-np');};
   $('modal-del').onclick = function(e){if(e.target===this)closeM('modal-del');};
   $('f-npname').onkeydown = function(e){if(e.key==='Enter')createP();};
@@ -357,7 +403,7 @@ function sv(name){
   document.querySelectorAll('.view').forEach(function(v){v.classList.remove('on');});
   document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on');});
   var el = $('view-'+name); if(el) el.classList.add('on');
-  var idx={settings:0,backlog:1,plan:2,dashboard:3}[name];
+  var idx={settings:0,backlog:1,plan:2,dashboard:3,team:4}[name];
   var tabs = document.querySelectorAll('.tab');
   if(tabs[idx]) tabs[idx].classList.add('on');
   if(name==='plan') genPlan();
@@ -590,7 +636,7 @@ function genPlan(){
 }
 function sit(i,ul,ov){
   var pc=i.pv<=3?'p1':i.pv<=6?'p2':i.pv<=9?'p3':'p4';
-  return '<div class="si2'+(ov?' ov':'')+'"><div class="si2-h"><span class="si2-k">'+i.key+'</span><span class="si2-t">'+i.summary+'</span></div>'
+  return '<div class="si2'+(ov?' ov':'')+'"><div class="si2-h"><span class="si2-k jlink" data-key="'+i.key+'" style="cursor:pointer">'+i.key+'</span><span class="si2-t">'+i.summary+'</span></div>'
     +'<div class="si2-m">'+(i.pv!==999?'<span class="tag t'+pc+'">P'+i.pv+'</span>':'')+
     (i.be?'<span class="ep ep-be">BE '+i.be+ul+'</span>':'')+(i.fe?'<span class="ep ep-fe">FE '+i.fe+ul+'</span>':'')+
     (ov?'<span style="color:var(--red);font-size:11px;font-weight:700">kapasite asimi</span>':'')+
@@ -674,11 +720,166 @@ function diHTML(i,ul,doneS,ok){
   var s=(i.fields.status&&i.fields.status.name)||'',a=(i.fields.assignee&&i.fields.assignee.displayName)||'-';
   var be=parseFloat(i.fields[S.fieldBE])||0,fe=parseFloat(i.fields[S.fieldFE])||0,pv=ppv(i.fields[S.fieldPV]);
   var pc=pv<=3?'p1':pv<=6?'p2':pv<=9?'p3':'p4';
-  return '<div class="di"><div class="di-t"><span class="di-k">'+i.key+'</span><span class="di-s">'+i.fields.summary+'</span></div>'
+  return '<div class="di"><div class="di-t"><span class="di-k jlink" data-key="'+i.key+'" style="cursor:pointer">'+i.key+'</span><span class="di-s">'+i.fields.summary+'</span></div>'
     +'<div class="di-m"><span class="sp2 '+(ok?'sp-ok':'sp-pr')+'">'+s+'</span>'
     +(pv!==999?'<span class="tag t'+pc+'">P'+pv+'</span>':'')
     +(be?'<span class="ep ep-be">BE '+be+ul+'</span>':'')+(fe?'<span class="ep ep-fe">FE '+fe+ul+'</span>':'')
     +'<span style="font-size:11px;color:var(--text3);margin-left:auto">'+a+'</span></div></div>';
+}
+
+
+// Jira issue URL ac
+function openJira(key){
+  if(S.jiraUrl && key){
+    window.open(S.jiraUrl+'/browse/'+key,'_blank');
+  }
+}
+
+// kl (key-link) click handler - backlog tablosundaki linkleri canlandir
+function bindKeyLinks(){
+  document.querySelectorAll('.jlink').forEach(function(el){
+    el.onclick = function(){ openJira(el.getAttribute('data-key') || el.textContent.trim()); };
+  });
+}
+
+// Sprint item ve dashboard issue linkleri icin key span olustur
+function keyLink(key){
+  return '<span class="kl jlink" data-key="'+key+'" style="cursor:pointer">'+key+'</span>';
+}
+
+// ============================================================
+// TEAM DASHBOARD
+// ============================================================
+async function loadTeam(){
+  var sid = document.getElementById('f-tsid') ? document.getElementById('f-tsid').value.trim() : '';
+  if(!sid){toast('Sprint ID gerekli','err');return;}
+  if(!S.connected||!S.jiraUrl||!S.token){toast('Once Jira baglantisi kurun','err');return;}
+  var capPerPerson = parseInt(document.getElementById('f-tcap') ? document.getElementById('f-tcap').value : '40') || 40;
+  var tc = document.getElementById('team-content');
+  tc.innerHTML = '<div class="loading"><div class="spin"></div> Takim verileri yukleniyor...</div>';
+  try {
+    var fields = ['summary','status','issuetype','assignee',S.fieldBE,S.fieldFE,S.fieldPV,'sprint'].filter(Boolean);
+    var r = await jPOST('rest/api/3/search/jql',{
+      jql:'project = '+S.project+' AND sprint = '+sid+' AND assignee is not EMPTY ORDER BY assignee ASC',
+      maxResults:200, fields:fields
+    });
+    var t = await r.text(), d;
+    try{d=JSON.parse(t);}catch(e){throw new Error('Gecersiz yanit');}
+    if(!r.ok){var m=(d.errorMessages&&d.errorMessages[0])||d.message||('HTTP '+r.status);throw new Error(m);}
+
+    var iss = d.issues || [];
+    if(!iss.length){
+      tc.innerHTML='<div class="empty"><div class="ico">&#128101;</div><p>Bu sprintte atanmis madde bulunamadi.</p></div>';
+      return;
+    }
+
+    document.getElementById('team-lbl').textContent = iss.length+' atanmis madde - Sprint '+sid;
+
+    // Kullanicilara gore grupla
+    var userMap = {};
+    iss.forEach(function(i){
+      var a = i.fields.assignee;
+      if(!a) return;
+      var uid = a.accountId || a.displayName;
+      if(!userMap[uid]){
+        userMap[uid] = {
+          name: a.displayName,
+          avatar: (a.displayName||'?').charAt(0).toUpperCase(),
+          avatarUrl: (a.avatarUrls && a.avatarUrls['48x48']) || null,
+          issues: []
+        };
+      }
+      userMap[uid].issues.push(i);
+    });
+
+    var ul = S.effortUnit==='hours'?'s':S.effortUnit==='days'?'g':'sp';
+    var users = Object.values(userMap).sort(function(a,b){return a.name.localeCompare(b.name);});
+
+    // Takim ozeti
+    var totalBE = iss.reduce(function(s,i){return s+(parseFloat(i.fields[S.fieldBE])||0);},0);
+    var totalFE = iss.reduce(function(s,i){return s+(parseFloat(i.fields[S.fieldFE])||0);},0);
+    var totalIss = iss.length;
+    var totalUsers = users.length;
+    var totalCap = capPerPerson * totalUsers;
+    var totalEffort = totalBE + totalFE;
+    var capPct = totalCap > 0 ? Math.min(100, Math.round(totalEffort/totalCap*100)) : 0;
+
+    var html = '<div class="team-summary">'
+      +'<div class="ts-card" style="border-top:3px solid var(--accent2)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px">Takim Uyeleri</div><div style="font-size:28px;font-weight:800;font-family:monospace">'+totalUsers+'</div><div style="font-size:12px;color:var(--text2);margin-top:2px">kisi</div></div>'
+      +'<div class="ts-card" style="border-top:3px solid var(--accent)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px">Toplam Madde</div><div style="font-size:28px;font-weight:800;font-family:monospace">'+totalIss+'</div><div style="font-size:12px;color:var(--text2);margin-top:2px">atanmis</div></div>'
+      +'<div class="ts-card" style="border-top:3px solid var(--be)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px">Toplam BE Efor</div><div style="font-size:28px;font-weight:800;font-family:monospace;color:var(--be)">'+totalBE+ul+'</div><div style="font-size:12px;color:var(--text2);margin-top:2px">sprint boyunca</div></div>'
+      +'<div class="ts-card" style="border-top:3px solid var(--fe)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px">Toplam FE Efor</div><div style="font-size:28px;font-weight:800;font-family:monospace;color:var(--fe)">'+totalFE+ul+'</div><div style="font-size:12px;color:var(--text2);margin-top:2px">sprint boyunca</div></div>'
+      +'<div class="ts-card" style="border-top:3px solid var(--orange)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px">Toplam Kapasite</div><div style="font-size:28px;font-weight:800;font-family:monospace;color:var(--orange)">'+totalCap+ul+'</div><div style="font-size:12px;color:var(--text2);margin-top:2px">'+totalUsers+' x '+capPerPerson+ul+'</div></div>'
+      +'<div class="ts-card" style="border-top:3px solid '+(capPct>90?'var(--red)':capPct>70?'var(--orange)':'var(--green)')+'"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px">Efor / Kapasite</div><div style="font-size:28px;font-weight:800;font-family:monospace;color:'+(capPct>90?'var(--red)':capPct>70?'var(--orange)':'var(--green)')+'">'+capPct+'%</div><div style="font-size:12px;color:var(--text2);margin-top:2px">'+totalEffort+ul+' / '+totalCap+ul+'</div></div>'
+      +'</div>';
+
+    // Her kullanici karti
+    users.forEach(function(user){
+      var uBE = user.issues.reduce(function(s,i){return s+(parseFloat(i.fields[S.fieldBE])||0);},0);
+      var uFE = user.issues.reduce(function(s,i){return s+(parseFloat(i.fields[S.fieldFE])||0);},0);
+      var uTotal = uBE + uFE;
+      var uCap = capPerPerson;
+      var uPct = uCap > 0 ? Math.min(100, Math.round(uTotal/uCap*100)) : 0;
+      var uBoş = Math.max(0, uCap - uTotal);
+      var barColor = uPct >= 100 ? 'var(--red)' : uPct >= 80 ? 'var(--orange)' : uPct >= 60 ? 'var(--be)' : 'var(--green)';
+
+      html += '<div class="tmember">';
+      // Header
+      html += '<div class="tmember-hdr">';
+      if(user.avatarUrl){
+        html += '<img src="'+user.avatarUrl+'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display=&quot;none&quot;">';
+      } else {
+        html += '<div class="avatar">'+user.avatar+'</div>';
+      }
+      html += '<div><div class="tmember-name">'+user.name+'</div>'
+        +'<div class="tmember-meta">'+user.issues.length+' madde atanmis</div></div>';
+
+      // Stats
+      html += '<div class="tmember-stats">';
+      if(uBE){ html += '<div class="tstat" style="border-top:3px solid var(--be)"><div class="tstat-v" style="color:var(--be)">'+uBE+ul+'</div><div class="tstat-l">BE Efor</div></div>'; }
+      if(uFE){ html += '<div class="tstat" style="border-top:3px solid var(--fe)"><div class="tstat-v" style="color:var(--fe)">'+uFE+ul+'</div><div class="tstat-l">FE Efor</div></div>'; }
+      html += '<div class="tstat" style="border-top:3px solid var(--text2)"><div class="tstat-v">'+uTotal+ul+'</div><div class="tstat-l">Toplam</div></div>';
+      html += '<div class="tstat" style="border-top:3px solid var(--green)"><div class="tstat-v" style="color:var(--green)">'+uBoş+ul+'</div><div class="tstat-l">Bosluk</div></div>';
+      html += '<div class="tstat" style="border-top:3px solid '+barColor+'"><div class="tstat-v" style="color:'+barColor+'">%'+uPct+'</div><div class="tstat-l">Doluluk</div></div>';
+      html += '</div></div>'; // stats + header end
+
+      // Kapasite bar
+      html += '<div class="tcap-bar"><div class="tcap-fill" style="width:'+uPct+'%;background:'+barColor+'"></div></div>';
+      html += '<div class="tcap-labels"><span>0</span><span>'+uTotal+ul+' kullanildi</span><span>'+uCap+ul+' kapasite</span></div>';
+
+      // Maddeler
+      if(user.issues.length === 0){
+        html += '<div class="tno-items">Atanmis madde yok.</div>';
+      } else {
+        user.issues.forEach(function(i){
+          var s=(i.fields.status&&i.fields.status.name)||'';
+          var be=parseFloat(i.fields[S.fieldBE])||0;
+          var fe=parseFloat(i.fields[S.fieldFE])||0;
+          var pv=ppv(i.fields[S.fieldPV]);
+          var pc=pv<=3?'p1':pv<=6?'p2':pv<=9?'p3':'p4';
+          var itype=(i.fields.issuetype&&i.fields.issuetype.name)||'';
+          html += '<div class="tissue">';
+          html += '<div class="tissue-top">'
+            +'<span class="tissue-key jlink" data-key="'+i.key+'" style="cursor:pointer">'+i.key+'</span>'
+            +'<span class="tissue-title">'+i.fields.summary+'</span></div>';
+          html += '<div class="tissue-meta">';
+          if(s) html += '<span class="sp2 sp-pr" style="font-size:10px">'+s+'</span>';
+          if(itype) html += '<span class="tag tbe" style="font-size:10px">'+itype+'</span>';
+          if(pv!==999) html += '<span class="tag t'+pc+'">P'+pv+'</span>';
+          if(be) html += '<span class="ep ep-be">BE '+be+ul+'</span>';
+          if(fe) html += '<span class="ep ep-fe">FE '+fe+ul+'</span>';
+          if(!be&&!fe) html += '<span style="font-size:11px;color:var(--text3)">Efor girilmemis</span>';
+          html += '</div></div>';
+        });
+      }
+      html += '</div>'; // tmember end
+    });
+
+    tc.innerHTML = html;
+
+  } catch(e) {
+    tc.innerHTML = '<div class="empty"><div class="ico">&#9888;</div><p>'+e.message+'</p></div>';
+  }
 }
 
 function toast(msg,type){
