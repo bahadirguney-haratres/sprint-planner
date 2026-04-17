@@ -180,6 +180,32 @@ tbody td{padding:12px 14px;font-size:13px}
 .tno-items{color:var(--text3);font-size:13px;padding:16px 0;text-align:center}
 .team-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
 .ts-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px}
+.sprint-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:0}
+.sprint-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.sprint-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(79,142,247,.05),transparent);opacity:0;transition:opacity .2s}
+.sprint-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.sprint-card:hover::before{opacity:1}
+.sprint-card.active-sprint{border-color:var(--green)}
+.sprint-card.closed-sprint{border-color:var(--border);opacity:.7}
+.sprint-card.future-sprint{border-color:var(--accent2)}
+.sc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.sc-name{font-size:15px;font-weight:800;letter-spacing:-.3px;flex:1}
+.sc-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap}
+.sc-badge.active{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.sc-badge.closed{background:rgba(255,255,255,.06);color:var(--text3);border:1px solid var(--border)}
+.sc-badge.future{background:rgba(124,92,252,.15);color:var(--accent2);border:1px solid rgba(124,92,252,.3)}
+.sc-dates{font-size:12px;color:var(--text2);margin-bottom:8px;font-family:'JetBrains Mono',monospace}
+.sc-goal{font-size:12px;color:var(--text2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sc-id{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:8px}
+.dash-top-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.dash-top-bar .fg{margin-bottom:0}
+.back-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Syne',sans-serif}
+.back-btn:hover{border-color:var(--border2);color:var(--text)}
+.sprint-list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.sprint-list-header h3{font-size:16px;font-weight:800}
+.sl-filters{display:flex;gap:8px}
+.sl-filter{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Syne',sans-serif}
+.sl-filter.on{background:var(--surface2);border-color:var(--border2);color:var(--text)}
 @media(max-width:768px){.g2,.g3{grid-template-columns:1fr}.sgrid{grid-template-columns:1fr}.scols,.dcols{grid-template-columns:1fr}.dhero{grid-template-columns:1fr 1fr}.tabs{display:none}}
 </style>
 </head>
@@ -284,30 +310,62 @@ tbody td{padding:12px 14px;font-size:13px}
 </div>
 
 <div class="view" id="view-dashboard">
-  <div class="ptitle">Sprint Dashboard</div>
-  <div class="psub">Sprint ilerleme durumu ve madde detaylari</div>
-  <div class="dibar">
-    <div class="fg"><label>Sprint ID</label><input id="f-sid" type="text" placeholder="466" style="width:140px"></div>
-    <div class="fg"><label>Tamamlandi Statusu</label><input id="f-done" type="text" value="READY FOR UAT" style="width:200px"></div>
-    <button class="btn bp" id="btn-dash">Yukle</button>
-    <div style="flex:1"></div>
-    <span id="dash-lbl" style="font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace"></span>
+  <div id="dash-list-screen">
+    <div class="ptitle">Sprint Dashboard</div>
+    <div class="psub">Sprint secin, ilerleme durumunu ve madde detaylarini gorun</div>
+    <div class="sprint-list-header">
+      <h3 id="sl-title">Sprintler yukleniyor...</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="sl-filters">
+          <button class="sl-filter on" onclick="filterSprints('all',this)">Tumu</button>
+          <button class="sl-filter" onclick="filterSprints('active',this)">Aktif</button>
+          <button class="sl-filter" onclick="filterSprints('closed',this)">Kapali</button>
+          <button class="sl-filter" onclick="filterSprints('future',this)">Gelecek</button>
+        </div>
+        <button class="btn bs btn-sm" id="btn-reload-sprints" onclick="loadSprintList('dashboard')">Yenile</button>
+        <div class="fg" style="margin:0"><label style="font-size:10px">Tamamlandi Statusu</label><input id="f-done" type="text" value="READY FOR UAT" style="width:180px;padding:6px 10px;font-size:12px"></div>
+      </div>
+    </div>
+    <div id="sprint-list-dash"><div class="loading"><div class="spin"></div> Sprintler yukleniyor...</div></div>
   </div>
-  <div id="dash-content"><div class="empty"><div class="ico">&#128202;</div><p>Sprint ID girerek dashboard'u yukleyin.</p></div></div>
+  <div id="dash-detail-screen" style="display:none">
+    <div class="dash-top-bar">
+      <button class="back-btn" onclick="showSprintList('dashboard')">&#8592; Sprintler</button>
+      <div style="flex:1"></div>
+      <span id="dash-lbl" style="font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace"></span>
+    </div>
+    <div id="dash-content"></div>
+  </div>
 </div>
 
 
 <div class="view" id="view-team">
-  <div class="ptitle">Takim Durumu</div>
-  <div class="psub">Sprint'teki kullanicilarin is yuklerini, efor dagilimlari ve kapasitelerini gorun</div>
-  <div class="dibar">
-    <div class="fg"><label>Sprint ID</label><input id="f-tsid" type="text" placeholder="466" style="width:140px"></div>
-    <div class="fg"><label>Kapasite (saat/kisi)</label><input id="f-tcap" type="number" value="40" style="width:140px" placeholder="40"></div>
-    <button class="btn bp" id="btn-team">Yukle</button>
-    <div style="flex:1"></div>
-    <span id="team-lbl" style="font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace"></span>
+  <div id="team-list-screen">
+    <div class="ptitle">Takim Durumu</div>
+    <div class="psub">Sprint secin, takim uye is yuklerini ve kapasitelerini gorun</div>
+    <div class="sprint-list-header">
+      <h3 id="tl-title">Sprintler yukleniyor...</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="sl-filters">
+          <button class="sl-filter on" onclick="filterSprints('all',this,'team')">Tumu</button>
+          <button class="sl-filter" onclick="filterSprints('active',this,'team')">Aktif</button>
+          <button class="sl-filter" onclick="filterSprints('closed',this,'team')">Kapali</button>
+          <button class="sl-filter" onclick="filterSprints('future',this,'team')">Gelecek</button>
+        </div>
+        <button class="btn bs btn-sm" onclick="loadSprintList('team')">Yenile</button>
+        <div class="fg" style="margin:0"><label style="font-size:10px">Kisi Basi Kapasite</label><input id="f-tcap" type="number" value="40" style="width:120px;padding:6px 10px;font-size:12px"></div>
+      </div>
+    </div>
+    <div id="sprint-list-team"><div class="loading"><div class="spin"></div> Sprintler yukleniyor...</div></div>
   </div>
-  <div id="team-content"><div class="empty"><div class="ico">&#128101;</div><p>Sprint ID girerek takim durumunu yukleyin.</p></div></div>
+  <div id="team-detail-screen" style="display:none">
+    <div class="dash-top-bar">
+      <button class="back-btn" onclick="showSprintList('team')">&#8592; Sprintler</button>
+      <div style="flex:1"></div>
+      <span id="team-lbl" style="font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace"></span>
+    </div>
+    <div id="team-content"></div>
+  </div>
 </div>
 
 </div>
@@ -383,10 +441,7 @@ function bindAll(){
   $('btn-plan').onclick = function(){sv('plan');};
   $('f-search').oninput = filterBL;
   $('f-type').onchange = filterBL;
-  $('btn-dash').onclick = loadDash;
-  $('f-sid').onkeydown = function(e){if(e.key==='Enter')loadDash();};
-  $('btn-team').onclick = loadTeam;
-  $('f-tsid').onkeydown = function(e){if(e.key==='Enter')loadTeam();};
+  // Sprint list auto-loads when switching to dashboard/team tabs
   // Event delegation for all jlink elements
   document.addEventListener('click', function(e){
     if(e.target && e.target.classList.contains('jlink')){
@@ -407,6 +462,8 @@ function sv(name){
   var tabs = document.querySelectorAll('.tab');
   if(tabs[idx]) tabs[idx].classList.add('on');
   if(name==='plan') genPlan();
+  if(name==='dashboard') { showSprintList('dashboard'); if(!allSprints.length) loadSprintList('dashboard'); }
+  if(name==='team') { showSprintList('team'); if(!allSprints.length) loadSprintList('team'); }
 }
 
 function gid(){return Date.now().toString(36)+Math.random().toString(36).substr(2);}
@@ -748,10 +805,155 @@ function keyLink(key){
 }
 
 // ============================================================
+// SPRINT LIST
+// ============================================================
+var allSprints = [];
+var lastSprintListView = "dashboard";
+function retrySprintList(){ loadSprintList(lastSprintListView); }
+var currentFilter = {dashboard: 'all', team: 'all'};
+
+async function loadSprintList(view) {
+  if(!S.connected || !S.jiraUrl || !S.token) {
+    toast('Once Jira baglantisi kurun', 'err');
+    var listEl = $(view === 'dashboard' ? 'sprint-list-dash' : 'sprint-list-team');
+    if(listEl) listEl.innerHTML = '<div class="empty"><div class="ico">&#128274;</div><p>Jira baglantisi gerekli. Ayarlar bolumunden baglanti kurun.</p></div>';
+    return;
+  }
+
+  var listEl = $(view === 'dashboard' ? 'sprint-list-dash' : 'sprint-list-team');
+  var titleEl = $(view === 'dashboard' ? 'sl-title' : 'tl-title');
+  if(listEl) listEl.innerHTML = '<div class="loading"><div class="spin"></div> Sprintler yukleniyor...</div>';
+
+  try {
+    // Jira board ID'sini almak icin once board listesini cek
+    var boardResp = await jGET('rest/agile/1.0/board', {projectKeyOrId: S.project, maxResults: 50});
+    var boardText = await boardResp.text();
+    var boardData;
+    try { boardData = JSON.parse(boardText); } catch(e) { throw new Error('Board verisi alinamadi'); }
+    if(!boardResp.ok) throw new Error((boardData.errorMessages && boardData.errorMessages[0]) || ('HTTP ' + boardResp.status));
+
+    var boards = boardData.values || [];
+    if(!boards.length) throw new Error('Proje icin board bulunamadi: ' + S.project);
+
+    // Ilk board'un sprintlerini cek (veya proje adini iceren board)
+    var board = boards.find(function(b) {
+      return b.location && b.location.projectKey === S.project;
+    }) || boards[0];
+
+    var sprintResp = await jGET('rest/agile/1.0/board/' + board.id + '/sprint', {maxResults: 100});
+    var sprintText = await sprintResp.text();
+    var sprintData;
+    try { sprintData = JSON.parse(sprintText); } catch(e) { throw new Error('Sprint verisi alinamadi'); }
+    if(!sprintResp.ok) throw new Error((sprintData.errorMessages && sprintData.errorMessages[0]) || ('HTTP ' + sprintResp.status));
+
+    allSprints = (sprintData.values || []).sort(function(a, b) {
+      // Aktif sprintler en uste, sonra tarih sirasi
+      var stateOrder = {active: 0, future: 1, closed: 2};
+      var ao = stateOrder[a.state] !== undefined ? stateOrder[a.state] : 3;
+      var bo = stateOrder[b.state] !== undefined ? stateOrder[b.state] : 3;
+      if(ao !== bo) return ao - bo;
+      // Ayni state icinde en yeni en uste
+      var ad = a.startDate || a.createdDate || '';
+      var bd = b.startDate || b.createdDate || '';
+      return bd.localeCompare(ad);
+    });
+
+    if(titleEl) titleEl.textContent = allSprints.length + ' sprint bulundu — ' + board.name;
+    renderSprintList(view, currentFilter[view]);
+
+  } catch(e) {
+    lastSprintListView = view;
+    if(listEl) listEl.innerHTML = '<div class="empty"><div class="ico">&#9888;</div><p>' + e.message + '</p><p style="margin-top:8px"><button class="btn bs btn-sm" onclick="retrySprintList()">Tekrar Dene</button></p></div>';
+    if(titleEl) titleEl.textContent = 'Hata olustu';
+  }
+}
+
+function renderSprintList(view, filter) {
+  var listEl = $(view === 'dashboard' ? 'sprint-list-dash' : 'sprint-list-team');
+  if(!listEl) return;
+
+  var filtered = allSprints.filter(function(s) {
+    if(filter === 'all') return true;
+    if(filter === 'active') return s.state === 'active';
+    if(filter === 'closed') return s.state === 'closed';
+    if(filter === 'future') return s.state === 'future';
+    return true;
+  });
+
+  if(!filtered.length) {
+    listEl.innerHTML = '<div class="empty"><div class="ico">&#128203;</div><p>Bu filtrede sprint bulunamadi.</p></div>';
+    return;
+  }
+
+  var html = '<div class="sprint-list">';
+  filtered.forEach(function(sprint) {
+    var stateClass = sprint.state === 'active' ? 'active-sprint' : sprint.state === 'future' ? 'future-sprint' : 'closed-sprint';
+    var badgeClass = sprint.state === 'active' ? 'active' : sprint.state === 'future' ? 'future' : 'closed';
+    var badgeText = sprint.state === 'active' ? 'Aktif' : sprint.state === 'future' ? 'Gelecek' : 'Kapali';
+
+    var startDate = sprint.startDate ? new Date(sprint.startDate).toLocaleDateString('tr-TR', {day:'2-digit',month:'short',year:'numeric'}) : '';
+    var endDate = sprint.endDate ? new Date(sprint.endDate).toLocaleDateString('tr-TR', {day:'2-digit',month:'short',year:'numeric'}) : '';
+    var dateStr = startDate && endDate ? startDate + ' - ' + endDate : startDate || endDate || '';
+
+    var goal = sprint.goal || '';
+    var clickFn = 'selectSprint(' + sprint.id + ',' + (view === 'dashboard' ? '0' : '1') + ')';
+
+    html += '<div class="sprint-card ' + stateClass + '" onclick="' + clickFn + '">'
+      + '<div class="sc-header">'
+      + '<div class="sc-name">' + sprint.name + '</div>'
+      + '<span class="sc-badge ' + badgeClass + '">' + badgeText + '</span>'
+      + '</div>'
+      + (dateStr ? '<div class="sc-dates">&#128197; ' + dateStr + '</div>' : '')
+      + (goal ? '<div class="sc-goal">' + goal + '</div>' : '')
+      + '<div class="sc-id">ID: ' + sprint.id + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  listEl.innerHTML = html;
+}
+
+function filterSprints(filter, btn, view) {
+  // Determine which view we're in
+  if(!view) {
+    view = $('view-dashboard').classList.contains('on') ? 'dashboard' : 'team';
+  }
+  currentFilter[view] = filter;
+  // Update button states in the correct view
+  var container = $(view === 'dashboard' ? 'dash-list-screen' : 'team-list-screen');
+  if(container) {
+    container.querySelectorAll('.sl-filter').forEach(function(b) { b.classList.remove('on'); });
+  }
+  if(btn) btn.classList.add('on');
+  renderSprintList(view, filter);
+}
+
+function selectSprint(sprintId, viewType) {
+  if(viewType === 0 || viewType === 'dashboard') {
+    $('dash-list-screen').style.display = 'none';
+    $('dash-detail-screen').style.display = 'block';
+    loadDash(sprintId);
+  } else {
+    $('team-list-screen').style.display = 'none';
+    $('team-detail-screen').style.display = 'block';
+    loadTeam(sprintId);
+  }
+}
+
+function showSprintList(view) {
+  if(view === 'dashboard') {
+    $('dash-list-screen').style.display = 'block';
+    $('dash-detail-screen').style.display = 'none';
+  } else {
+    $('team-list-screen').style.display = 'block';
+    $('team-detail-screen').style.display = 'none';
+  }
+}
+
+// ============================================================
 // TEAM DASHBOARD
 // ============================================================
-async function loadTeam(){
-  var sid = document.getElementById('f-tsid') ? document.getElementById('f-tsid').value.trim() : '';
+async function loadTeam(sprintId){
+  var sid = sprintId || (document.getElementById('f-tsid') ? document.getElementById('f-tsid').value.trim() : '');
   if(!sid){toast('Sprint ID gerekli','err');return;}
   if(!S.connected||!S.jiraUrl||!S.token){toast('Once Jira baglantisi kurun','err');return;}
   var capPerPerson = parseInt(document.getElementById('f-tcap') ? document.getElementById('f-tcap').value : '40') || 40;
@@ -773,7 +975,9 @@ async function loadTeam(){
       return;
     }
 
-    document.getElementById('team-lbl').textContent = iss.length+' atanmis madde - Sprint '+sid;
+    var sprintObjT = allSprints.find(function(s){ return s.id == sid; });
+    var sprintNameT = sprintObjT ? sprintObjT.name : ('Sprint ' + sid);
+    document.getElementById('team-lbl').textContent = iss.length+' atanmis madde - ' + sprintNameT;
 
     // Kullanicilara gore grupla
     var userMap = {};
